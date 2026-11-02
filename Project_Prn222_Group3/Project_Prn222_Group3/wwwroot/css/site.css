@@ -13,7 +13,6 @@ html {
 body {
   background: #f5f7f6;
   color: #1f2937;
-  margin-bottom: 60px;
 }
 
 .navbar-vcms {
@@ -71,17 +70,6 @@ body {
 .form-control:focus,
 .form-check-input:focus {
   box-shadow: 0 0 0 .1rem #fff, 0 0 0 .25rem rgba(13, 148, 136, .35);
-}
-
-.footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  white-space: nowrap;
-  line-height: 60px;
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
-  font-size: .875rem;
 }
 
 .brand-mark {
