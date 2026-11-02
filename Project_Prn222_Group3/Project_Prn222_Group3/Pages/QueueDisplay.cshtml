@@ -1,0 +1,69 @@
+@page
+@model Project_Prn222_Group3.Pages.QueueDisplayModel
+@{
+    Layout = null;
+    var currentLabel = Model.Current?.Status == QueueStatuses.Serving ? "Đang phục vụ" : "Mời số";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hàng đợi phòng khám - VCMS</title>
+    <meta http-equiv="refresh" content="10" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="queue-body">
+    <div class="queue-shell">
+        <header class="queue-header">
+            <div>
+                <div class="queue-brand">VCMS</div>
+                <h1>Hàng đợi phòng khám thú y</h1>
+            </div>
+            <div class="text-end">
+                <div class="fs-4">@Model.Today.ToString("dd/MM/yyyy")</div>
+                <div class="opacity-75">@Model.WaitingCount lượt đang chờ</div>
+            </div>
+        </header>
+
+        <main class="queue-main">
+            <section class="queue-current">
+                @if (Model.Current is not null)
+                {
+                    <div class="queue-current-label">@currentLabel</div>
+                    <div class="queue-current-number">@Model.Current.Number.ToString("00")</div>
+                    <div class="queue-current-status">@DisplayText.QueueStatus(Model.Current.Status)</div>
+                }
+                else
+                {
+                    <div class="queue-current-label">Mời số</div>
+                    <div class="queue-current-number queue-current-empty">--</div>
+                    <div class="queue-current-status">Vui lòng chờ gọi số</div>
+                }
+            </section>
+
+            <section class="queue-list">
+                @if (Model.Tokens.Count == 0)
+                {
+                    <p class="queue-empty">Chưa có số thứ tự trong hôm nay.</p>
+                }
+                else
+                {
+                    @foreach (var token in Model.Tokens)
+                    {
+                        <div class="queue-token @QueueDisplayModel.TokenClass(token.Status)">
+                            <div class="queue-token-number">@token.Number.ToString("00")</div>
+                            <div class="queue-token-status">@DisplayText.QueueStatus(token.Status)</div>
+                        </div>
+                    }
+                }
+            </section>
+        </main>
+
+        <footer class="queue-footer">
+            Màn hình tự cập nhật mỗi 10 giây · Chỉ hiển thị số thứ tự, không hiển thị thông tin cá nhân
+        </footer>
+    </div>
+</body>
+</html>

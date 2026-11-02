@@ -1,10 +1,70 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Trang chủ";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="dashboard-hero mb-4">
+    <div>
+        <div class="text-uppercase small text-vcms fw-semibold mb-2">Phòng khám thú y VCMS</div>
+        <h1 class="display-6 fw-bold mb-2">Xin chào, @Model.FullName</h1>
+        <p class="text-muted mb-0">@AppRoles.DisplayName(Model.RoleName)</p>
+    </div>
 </div>
+
+<div class="row g-3">
+    @if (Model.CanManageAccounts)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Staff/Index" class="dashboard-card">
+                <div class="dashboard-icon">TK</div>
+                <h2 class="h5 mt-3">Tài khoản nhân viên</h2>
+                <p class="text-muted mb-0">Tạo tài khoản, gán vai trò và khóa tài khoản nhân viên.</p>
+            </a>
+        </div>
+    }
+
+    @if (Model.CanWorkAtReception)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Reception/CheckIn" class="dashboard-card">
+                <div class="dashboard-icon">CI</div>
+                <h2 class="h5 mt-3">Check-in bệnh nhân</h2>
+                <p class="text-muted mb-0">Ghi nhận bệnh nhân đến và cấp số thứ tự trong ngày.</p>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Reception/Queue" class="dashboard-card">
+                <div class="dashboard-icon">Q</div>
+                <h2 class="h5 mt-3">Điều phối hàng đợi</h2>
+                <p class="text-muted mb-0">Gọi số, bắt đầu phục vụ và cập nhật trạng thái lượt khám.</p>
+            </a>
+        </div>
+    }
+
+    @if (Model.IsClient)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Client/Index" class="dashboard-card">
+                <div class="dashboard-icon">HS</div>
+                <h2 class="h5 mt-3">Hồ sơ của tôi</h2>
+                <p class="text-muted mb-0">Xem thông tin chủ nuôi, thú cưng và lịch hẹn của bạn.</p>
+            </a>
+        </div>
+    }
+
+    <div class="col-md-6 col-xl-4">
+        <a asp-page="/QueueDisplay" target="_blank" class="dashboard-card">
+            <div class="dashboard-icon">MH</div>
+            <h2 class="h5 mt-3">Màn hình hàng đợi</h2>
+            <p class="text-muted mb-0">Màn hình công khai chỉ hiển thị số thứ tự và trạng thái.</p>
+        </a>
+    </div>
+</div>
+
+@if (!Model.CanManageAccounts && !Model.CanWorkAtReception && !Model.IsClient)
+{
+    <div class="alert alert-light border mt-4 mb-0">
+        Các chức năng dành cho vai trò của bạn đang được nhóm phát triển.
+    </div>
+}
