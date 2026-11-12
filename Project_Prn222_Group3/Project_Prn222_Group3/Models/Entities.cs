@@ -62,6 +62,8 @@ public class Client
     public User? User { get; set; }
 
     public ICollection<Animal> Animals { get; set; } = new List<Animal>();
+
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }
 
 [Table("Animals")]
@@ -89,6 +91,8 @@ public class Animal
     public bool IsActive { get; set; } = true;
 
     public Client Client { get; set; } = null!;
+
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }
 
 [Table("Appointments")]
@@ -98,6 +102,10 @@ public class Appointment
     public int AppointmentID { get; set; }
 
     public int AnimalID { get; set; }
+
+    public int? ClientID { get; set; }
+
+    public int? ServiceID { get; set; }
 
     public int VeterinarianID { get; set; }
 
@@ -116,6 +124,10 @@ public class Appointment
     public DateTime? CancelledAt { get; set; }
 
     public Animal Animal { get; set; } = null!;
+
+    public Client? Client { get; set; }
+
+    public ClinicService? Service { get; set; }
 
     public User Veterinarian { get; set; } = null!;
 
@@ -164,4 +176,84 @@ public class QueueEntry
     public DateTime? CalledAt { get; set; }
 
     public Visit Visit { get; set; } = null!;
+}
+
+[Table("ClinicSettings")]
+public class ClinicSetting
+{
+    [Key]
+    public int ClinicSettingID { get; set; }
+
+    public string ClinicName { get; set; } = "Phòng khám thú y VCMS";
+
+    public string? Address { get; set; }
+
+    public string? Phone { get; set; }
+
+    public string? Email { get; set; }
+
+    public int SlotMinutes { get; set; } = 30;
+
+    public int OpenHour { get; set; } = 8;
+
+    public int CloseHour { get; set; } = 17;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+[Table("Services")]
+public class ClinicService
+{
+    [Key]
+    public int ServiceID { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Category { get; set; } = ServiceCategories.Veterinary;
+
+    public int DurationMinutes { get; set; } = 30;
+
+    public decimal Price { get; set; }
+
+    public string? Description { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+}
+
+[Table("StaffSchedules")]
+public class StaffSchedule
+{
+    [Key]
+    public int StaffScheduleID { get; set; }
+
+    public int UserID { get; set; }
+
+    public byte DayOfWeek { get; set; }
+
+    public TimeSpan StartTime { get; set; }
+
+    public TimeSpan EndTime { get; set; }
+
+    public bool IsWorking { get; set; } = true;
+
+    public User User { get; set; } = null!;
+}
+
+[Table("BlockedTimes")]
+public class BlockedTime
+{
+    [Key]
+    public int BlockedTimeID { get; set; }
+
+    public int UserID { get; set; }
+
+    public DateTime StartAt { get; set; }
+
+    public DateTime EndAt { get; set; }
+
+    public string? Reason { get; set; }
+
+    public User User { get; set; } = null!;
 }

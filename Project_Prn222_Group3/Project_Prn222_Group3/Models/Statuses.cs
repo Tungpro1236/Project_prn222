@@ -8,6 +8,11 @@ public static class AppointmentStatuses
     public const string Completed = "Completed";
     public const string Cancelled = "Cancelled";
     public const string NoShow = "NoShow";
+
+    public static readonly string[] Active =
+    [
+        Pending, Confirmed, CheckedIn
+    ];
 }
 
 public static class VisitStatuses
@@ -16,6 +21,24 @@ public static class VisitStatuses
     public const string InProgress = "InProgress";
     public const string Completed = "Completed";
     public const string Cancelled = "Cancelled";
+}
+
+public static class ServiceCategories
+{
+    public const string Veterinary = "Veterinary";
+    public const string Grooming = "Grooming";
+
+    public static readonly string[] All = [Veterinary, Grooming];
+
+    public static string Display(string category) => category switch
+    {
+        Veterinary => "Khám thú y",
+        Grooming => "Grooming",
+        _ => category
+    };
+
+    public static bool IsValid(string? category) =>
+        All.Any(item => string.Equals(item, category, StringComparison.OrdinalIgnoreCase));
 }
 
 public static class QueueStatuses

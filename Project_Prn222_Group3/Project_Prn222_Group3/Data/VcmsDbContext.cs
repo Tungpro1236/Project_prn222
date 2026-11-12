@@ -16,6 +16,10 @@ public class VcmsDbContext : DbContext
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Visit> Visits => Set<Visit>();
     public DbSet<QueueEntry> QueueEntries => Set<QueueEntry>();
+    public DbSet<ClinicSetting> ClinicSettings => Set<ClinicSetting>();
+    public DbSet<ClinicService> Services => Set<ClinicService>();
+    public DbSet<StaffSchedule> StaffSchedules => Set<StaffSchedule>();
+    public DbSet<BlockedTime> BlockedTimes => Set<BlockedTime>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,8 +85,18 @@ public class VcmsDbContext : DbContext
             entity.Property(x => x.CancelledAt).HasColumnType("datetime2(0)");
 
             entity.HasOne(x => x.Animal)
-                .WithMany()
+                .WithMany(x => x.Appointments)
                 .HasForeignKey(x => x.AnimalID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Client)
+                .WithMany(x => x.Appointments)
+                .HasForeignKey(x => x.ClientID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Service)
+                .WithMany(x => x.Appointments)
+                .HasForeignKey(x => x.ServiceID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(x => x.Veterinarian)
@@ -123,6 +137,47 @@ public class VcmsDbContext : DbContext
                 .WithOne(x => x.QueueEntry)
                 .HasForeignKey<QueueEntry>(x => x.VisitID)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ClinicSetting>(entity =>
+        {
+            entity.Property(x => x.ClinicName).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Address).HasMaxLength(255);
+            entity.Property(x => x.Phone).HasMaxLength(20);
+            entity.Property(x => x.Email).HasMaxLength(150);
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2(0)");
+        });
+
+        modelBuilder.Entity<ClinicService>(entity =>
+        {
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.Price).HasPrecision(12, 0);
+            entity.Property(x => x.Description).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<StaffSchedule>(entity =>
+        {
+            entity.Property(x => x.StartTime).HasColumnType("time(0)");
+            entity.Property(x => x.EndTime).HasColumnType("time(0)");
+            entity.HasIndex(x => new { x.UserID, x.DayOfWeek }).IsUnique();
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BlockedTime>(entity =>
+        {
+            entity.Property(x => x.StartAt).HasColumnType("datetime2(0)");
+            entity.Property(x => x.EndAt).HasColumnType("datetime2(0)");
+            entity.Property(x => x.Reason).HasMaxLength(200);
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

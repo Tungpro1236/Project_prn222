@@ -22,6 +22,39 @@
                 <p class="text-muted mb-0">Tạo tài khoản, gán vai trò và khóa tài khoản nhân viên.</p>
             </a>
         </div>
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Clinic/Settings" class="dashboard-card">
+                <div class="dashboard-icon">PK</div>
+                <h2 class="h5 mt-3">Cấu hình phòng khám</h2>
+                <p class="text-muted mb-0">Giờ mở cửa, khung giờ, dịch vụ và lịch làm việc.</p>
+            </a>
+        </div>
+    }
+
+    @if (Model.CanEditRecords)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Customers/Index" class="dashboard-card">
+                <div class="dashboard-icon">KH</div>
+                <h2 class="h5 mt-3">Khách hàng và thú cưng</h2>
+                <p class="text-muted mb-0">Tạo, tìm và cập nhật hồ sơ chủ nuôi cùng thú cưng.</p>
+            </a>
+        </div>
+    }
+
+    @if (Model.CanViewAppointments)
+    {
+        <div class="col-md-6 col-xl-4">
+            <a asp-page="/Appointments/Index" class="dashboard-card">
+                <div class="dashboard-icon">LH</div>
+                <h2 class="h5 mt-3">@(Model.CanBook ? "Đặt lịch hẹn" : "Lịch hẹn của tôi")</h2>
+                <p class="text-muted mb-0">
+                    @(Model.CanBook
+                        ? "Chọn dịch vụ và khung giờ còn trống, không trùng ca nghỉ."
+                        : "Xem các lịch hẹn được phân cho bạn. Bạn không đặt hoặc đổi lịch.")
+                </p>
+            </a>
+        </div>
     }
 
     @if (Model.CanWorkAtReception)
@@ -62,7 +95,7 @@
     </div>
 </div>
 
-@if (!Model.CanManageAccounts && !Model.CanWorkAtReception && !Model.IsClient)
+@if (!Model.CanManageAccounts && !Model.CanWorkAtReception && !Model.CanEditRecords && !Model.CanViewAppointments)
 {
     <div class="alert alert-light border mt-4 mb-0">
         Các chức năng dành cho vai trò của bạn đang được nhóm phát triển.

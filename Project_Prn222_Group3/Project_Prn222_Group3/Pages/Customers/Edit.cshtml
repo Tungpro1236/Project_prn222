@@ -1,0 +1,48 @@
+@page "{id:int}"
+@model Project_Prn222_Group3.Pages.Customers.EditModel
+@{
+    ViewData["Title"] = "Sửa khách hàng";
+}
+
+<div class="mb-4">
+    <a asp-page="Details" asp-route-id="@RouteData.Values["id"]" class="small text-decoration-none">&larr; Hồ sơ khách hàng</a>
+    <h1 class="h3 mt-2 mb-1">Cập nhật khách hàng</h1>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Input.FullName" class="form-label">Họ tên</label>
+                    <input asp-for="Input.FullName" class="form-control" />
+                    <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Phone" class="form-label">Số điện thoại</label>
+                    <input asp-for="Input.Phone" class="form-control" />
+                    <span asp-validation-for="Input.Phone" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Email" class="form-label">Email</label>
+                    <input asp-for="Input.Email" class="form-control" />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Address" class="form-label">Địa chỉ</label>
+                    <input asp-for="Input.Address" class="form-control" />
+                    <span asp-validation-for="Input.Address" class="text-danger small"></span>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-vcms">Lưu thay đổi</button>
+                <a asp-page="Details" asp-route-id="@RouteData.Values["id"]" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

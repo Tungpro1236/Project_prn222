@@ -37,6 +37,28 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-page="/Staff/Index">Tài khoản nhân viên</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Clinic/Settings">Phòng khám</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Clinic/Services">Dịch vụ</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Clinic/Schedules">Lịch làm</a>
+                            </li>
+                        }
+                        @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist) || User.IsInRole(AppRoles.ClinicManager))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Customers/Index">Khách hàng</a>
+                            </li>
+                        }
+                        @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist) || User.IsInRole(AppRoles.ClinicManager)
+                            || User.IsInRole(AppRoles.Client) || User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.PetGroomer))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Appointments/Index">Lịch hẹn</a>
+                            </li>
                         }
                         @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist))
                         {

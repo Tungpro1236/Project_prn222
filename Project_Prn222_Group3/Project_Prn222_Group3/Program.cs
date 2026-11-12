@@ -14,6 +14,7 @@ var connectionString = builder.Configuration.GetConnectionString("Vcms")
 builder.Services.AddDbContext<VcmsDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ReceptionService>();
+builder.Services.AddScoped<BookingService>();
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

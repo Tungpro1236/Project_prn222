@@ -91,8 +91,8 @@ else
                     <tr>
                         <th>Thời gian</th>
                         <th>Thú cưng</th>
-                        <th>Bác sĩ</th>
-                        <th>Lý do</th>
+                        <th>Dịch vụ</th>
+                        <th>Bác sĩ / nhân viên</th>
                         <th>Trạng thái</th>
                     </tr>
                 </thead>
@@ -110,8 +110,8 @@ else
                         <tr>
                             <td>@ClinicTime.Format(appointment.AppointmentTime)</td>
                             <td class="fw-semibold">@appointment.Animal.Name</td>
+                            <td>@(appointment.Service?.Name ?? appointment.Reason ?? "—")</td>
                             <td>@appointment.Veterinarian.FullName</td>
-                            <td>@(appointment.Reason ?? "—")</td>
                             <td>
                                 <span class="badge @DisplayText.AppointmentBadge(appointment.Status)">
                                     @DisplayText.AppointmentStatus(appointment.Status)

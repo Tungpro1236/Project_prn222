@@ -24,15 +24,25 @@ public static class DbSeeder
         var reception = await EnsureUserAsync(db, hasher, roles, "reception", "Reception@123", "Lễ tân Ngọc Lan", AppRoles.Receptionist, "reception@vcms.local", "0900000002");
         var vet = await EnsureUserAsync(db, hasher, roles, "vet1", "Vet@123", "Bác sĩ Minh", AppRoles.Veterinarian, "vet1@vcms.local", "0900000003");
         var clientUser = await EnsureUserAsync(db, hasher, roles, "client1", "Client@123", "Nguyễn Văn An", AppRoles.Client, "client1@vcms.local", "0901234567");
+        var groomer = await EnsureUserAsync(db, hasher, roles, "groomer1", "Groomer@123", "Nhân viên Hà", AppRoles.PetGroomer, "groomer1@vcms.local", "0900000004");
 
         var client = await EnsureDemoClientAsync(db, clientUser);
         var miu = await EnsureAnimalAsync(db, client, "Miu", "Mèo", "Mèo ta", "Female", 3.2m);
         var bong = await EnsureAnimalAsync(db, client, "Bông", "Chó", "Poodle", "Male", 12.5m);
 
-        await EnsureDemoAppointmentAsync(db, miu, vet, reception, 9, isConfirmed: true);
-        await EnsureDemoAppointmentAsync(db, bong, vet, reception, 10, isConfirmed: false);
+        await EnsureClinicSettingAsync(db);
+        var exam = await EnsureServiceAsync(db, "Khám tổng quát", ServiceCategories.Veterinary, 30, 150000, "Khám lâm sàng và tư vấn.");
+        var vaccine = await EnsureServiceAsync(db, "Tiêm phòng", ServiceCategories.Veterinary, 20, 250000, "Tiêm vaccine theo lịch.");
+        var grooming = await EnsureServiceAsync(db, "Tắm và cắt tỉa", ServiceCategories.Grooming, 60, 300000, "Tắm, sấy và cắt tỉa lông.");
 
-        logger.LogInformation("VCMS demo data is ready. Demo accounts: manager, reception, vet1, client1.");
+        await EnsureWeekdayScheduleAsync(db, vet, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0));
+        await EnsureWeekdayScheduleAsync(db, groomer, new TimeSpan(9, 0, 0), new TimeSpan(17, 0, 0));
+        await EnsureDemoBlockAsync(db, vet);
+
+        await EnsureDemoAppointmentAsync(db, miu, vet, reception, exam, 9, isConfirmed: true);
+        await EnsureDemoAppointmentAsync(db, bong, vet, reception, vaccine, 10, isConfirmed: false);
+
+        logger.LogInformation("VCMS demo data is ready. Demo accounts: manager, reception, vet1, groomer1, client1.");
     }
 
     private static async Task<Dictionary<string, Role>> EnsureRolesAsync(VcmsDbContext db)
@@ -151,8 +161,9 @@ public static class DbSeeder
     private static async Task EnsureDemoAppointmentAsync(
         VcmsDbContext db,
         Animal animal,
-        User vet,
+        User provider,
         User createdBy,
+        ClinicService service,
         int hour,
         bool isConfirmed)
     {
@@ -173,9 +184,9 @@ public static class DbSeeder
         if (isConfirmed)
         {
             var slotTaken = await db.Appointments.AnyAsync(a =>
-                a.VeterinarianID == vet.UserID &&
+                a.VeterinarianID == provider.UserID &&
                 a.AppointmentTime == appointmentTime &&
-                (a.Status == AppointmentStatuses.Confirmed || a.Status == AppointmentStatuses.CheckedIn));
+                AppointmentStatuses.Active.Contains(a.Status));
             if (slotTaken)
             {
                 return;
@@ -185,13 +196,112 @@ public static class DbSeeder
         db.Appointments.Add(new Appointment
         {
             AnimalID = animal.AnimalID,
-            VeterinarianID = vet.UserID,
+            ClientID = animal.ClientID,
+            ServiceID = service.ServiceID,
+            VeterinarianID = provider.UserID,
             AppointmentTime = appointmentTime,
-            ExpectedDurationMinutes = 30,
-            Reason = "Khám tổng quát",
+            ExpectedDurationMinutes = service.DurationMinutes,
+            Reason = service.Name,
             Status = status,
             CreatedByUserID = createdBy.UserID,
             CreatedAt = ClinicTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsureClinicSettingAsync(VcmsDbContext db)
+    {
+        if (await db.ClinicSettings.AnyAsync())
+        {
+            return;
+        }
+
+        db.ClinicSettings.Add(new ClinicSetting
+        {
+            ClinicName = "Phòng khám thú y VCMS",
+            Address = "Quận 1, TP. Hồ Chí Minh",
+            Phone = "0280000000",
+            Email = "clinic@vcms.local",
+            SlotMinutes = 30,
+            OpenHour = 8,
+            CloseHour = 17,
+            UpdatedAt = ClinicTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<ClinicService> EnsureServiceAsync(
+        VcmsDbContext db,
+        string name,
+        string category,
+        int durationMinutes,
+        decimal price,
+        string description)
+    {
+        var service = await db.Services.FirstOrDefaultAsync(s => s.Name == name);
+        if (service is not null)
+        {
+            return service;
+        }
+
+        service = new ClinicService
+        {
+            Name = name,
+            Category = category,
+            DurationMinutes = durationMinutes,
+            Price = price,
+            Description = description,
+            IsActive = true
+        };
+        db.Services.Add(service);
+        await db.SaveChangesAsync();
+        return service;
+    }
+
+    private static async Task EnsureWeekdayScheduleAsync(VcmsDbContext db, User user, TimeSpan start, TimeSpan end)
+    {
+        var existingDays = await db.StaffSchedules
+            .Where(s => s.UserID == user.UserID)
+            .Select(s => s.DayOfWeek)
+            .ToListAsync();
+
+        for (byte day = 1; day <= 6; day++)
+        {
+            if (existingDays.Contains(day))
+            {
+                continue;
+            }
+
+            db.StaffSchedules.Add(new StaffSchedule
+            {
+                UserID = user.UserID,
+                DayOfWeek = day,
+                StartTime = start,
+                EndTime = end,
+                IsWorking = true
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsureDemoBlockAsync(VcmsDbContext db, User user)
+    {
+        var tomorrow = ClinicTime.VnToday.AddDays(1);
+        var start = ClinicTime.VnLocalToUtc(tomorrow.AddHours(12));
+        var end = ClinicTime.VnLocalToUtc(tomorrow.AddHours(13));
+        var exists = await db.BlockedTimes.AnyAsync(b => b.UserID == user.UserID && b.StartAt == start);
+        if (exists)
+        {
+            return;
+        }
+
+        db.BlockedTimes.Add(new BlockedTime
+        {
+            UserID = user.UserID,
+            StartAt = start,
+            EndAt = end,
+            Reason = "Nghỉ trưa"
         });
         await db.SaveChangesAsync();
     }

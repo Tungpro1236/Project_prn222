@@ -16,6 +16,15 @@ public class IndexModel : PageModel
     public bool CanWorkAtReception =>
         User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist);
 
+    public bool CanEditRecords =>
+        User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist) || User.IsInRole(AppRoles.ClinicManager);
+
+    public bool CanBook =>
+        CanEditRecords || User.IsInRole(AppRoles.Client);
+
+    public bool CanViewAppointments =>
+        CanBook || User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.PetGroomer);
+
     public bool IsClient => User.IsInRole(AppRoles.Client);
 
     public void OnGet()

@@ -19,4 +19,7 @@ public static class ClinicTime
 
     public static string FormatTime(DateTime utc) =>
         ToVietnam(utc).ToString("HH:mm");
+
+    public static string FormatDate(DateTime utc) =>
+        ToVietnam(utc).ToString("dd/MM/yyyy");
 }

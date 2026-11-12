@@ -1,0 +1,90 @@
+@page
+@model Project_Prn222_Group3.Pages.Appointments.IndexModel
+@{
+    ViewData["Title"] = "Lịch hẹn";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Lịch hẹn</h1>
+        <p class="text-muted mb-0">
+            @(Model.IsClient
+                ? "Các lịch hẹn của thú cưng thuộc tài khoản của bạn."
+                : Model.CanBook
+                    ? "Lịch hẹn trong ngày đã chọn."
+                    : "Lịch hẹn được phân cho bạn trong ngày đã chọn.")
+        </p>
+    </div>
+    @if (Model.CanBook)
+    {
+        <a asp-page="Book" class="btn btn-vcms">+ Đặt lịch</a>
+    }
+</div>
+
+@if (!Model.IsClient)
+{
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-auto">
+            <input type="date" name="date" value="@Model.Date?.ToString("yyyy-MM-dd")" class="form-control" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Xem ngày</button>
+        </div>
+    </form>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Khách / thú cưng</th>
+                    <th>Dịch vụ</th>
+                    <th>Nhân viên</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-muted py-4">Không có lịch hẹn.</td></tr>
+            }
+            else
+            {
+                @foreach (var item in Model.Items)
+                {
+                    var canChange = Model.CanBook && item.Status is AppointmentStatuses.Pending or AppointmentStatuses.Confirmed;
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@ClinicTime.FormatTime(item.AppointmentTime)</div>
+                            <div class="text-muted small">@ClinicTime.FormatDate(item.AppointmentTime)</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@item.Animal.Client.FullName</div>
+                            <div class="text-muted small">@item.Animal.Name · @item.Animal.Client.Phone</div>
+                        </td>
+                        <td>@(item.Service?.Name ?? "—")</td>
+                        <td>
+                            <div>@item.Veterinarian.FullName</div>
+                            <div class="text-muted small">@AppRoles.DisplayName(item.Veterinarian.Role.RoleName)</div>
+                        </td>
+                        <td><span class="badge @DisplayText.AppointmentBadge(item.Status)">@DisplayText.AppointmentStatus(item.Status)</span></td>
+                        <td class="text-end">
+                            @if (canChange)
+                            {
+                                <a asp-page="Book" asp-route-id="@item.AppointmentID" class="btn btn-sm btn-outline-primary">Đổi lịch</a>
+                                <form method="post" asp-page="Cancel" asp-route-id="@item.AppointmentID" class="d-inline"
+                                      onsubmit="return confirm('Hủy lịch hẹn này?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Hủy</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
