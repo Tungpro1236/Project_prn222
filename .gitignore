@@ -9,3 +9,8 @@ obj/
 /AGENTS.md
 /IMPLEMENTATION_REPORT.md
 /VCMS_Database.sql
+
+# Generated local demo data, credentials and database backups
+/.local-demo/
+/DEMO_ACCOUNTS.local.md
+*.bak

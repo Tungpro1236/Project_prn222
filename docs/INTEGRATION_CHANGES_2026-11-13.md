@@ -4,7 +4,7 @@ Branch: `integration/nghia-kiet-linh-20261113`.
 Integration base: Nghĩa `567b3d7`, already containing Kiệt `995fde1` and Linh `781a78d`.
 Incoming branch: `dev_tung` at `0022e16` (also the file content of `main` at `6969d7a`).
 
-The local merge reconciles Tung's useful changes with the newer team-schema application. All five issues from the earlier integration report are fixed. Nothing was pushed and `main` was not moved.
+The merge reconciles Tung's useful changes with the newer team-schema application. All five issues from the earlier integration report are fixed. The verification below records the local integration stage; the Vietnamese team guide describes sharing and running this branch before merging into `main`.
 
 ## Changes by member
 
@@ -80,3 +80,12 @@ Paths below are relative to `Project_Prn222_Group3/Project_Prn222_Group3/`.
 - SQL tests use randomly named `VCMS_Test_<32 hex characters>` databases. Both test databases and preview servers were cleaned up. Live VeterinaryClinicDB remained at 24 tables and zero users, appointments, encounters and stock movements.
 
 Local detail: `Tests/VCMS.Integration/INTEGRATION_RUN.md`, `latest-full-app-results.json`, `latest-console.log`, and `dev-tung-merge-conflicts.log`.
+
+## Team handoff package
+
+- `docs/HUONG_DAN_NHOM_VI.md`: short Vietnamese setup, role accounts, end-to-end demo and breakpoint guide.
+- `scripts/Add-DemoData.ps1` and `tools/VCMS.DemoSeed`: explicit, local-only, opt-in fixture creation. Back up first, insert the demo dataset in a transaction, preserve schema and existing catalogue, generate a new password per machine, and write credentials only to ignored local output. Existing manifests/demo users prevent accidental reseeding.
+- `database/VCMS_Database.sql`: an unchanged copy of the authoritative 24-table schema for fresh setup. The data script does not execute schema DDL.
+- Nullable-unique Clients.UserID: if an anonymous owner already exists, link the extra demo owner to an additional demo client login rather than changing the constraint.
+- Package verification: build 0 warnings/errors; 95 checks passed across fresh and already-populated anonymous-client cases, including all 11 real cookie logins/role homes, snapshot readability, stock reconciliation, schedule validity, schema equality and rerun rejection. Both disposable databases/owned web server were removed.
+- The shared appsettings.json uses Windows Authentication without a SQL password. The operator's modified local appsettings.json is preserved outside the commit. Older commits already on GitHub may still contain the historical connection string; this handoff does not rewrite teammates' published history.
