@@ -75,25 +75,24 @@ await File.WriteAllTextAsync(Path.Combine(local,"pre-seed-backup.txt"),backupPat
 await using var db = new VcmsDbContext(options);
 var roles = await db.Roles.ToDictionaryAsync(x => x.RoleName);
 var accountSpecs = new[] {
-    ("demo.admin", AppRoles.Admin, "[DEMO] Quản trị"),
-    ("demo.manager", AppRoles.ClinicManager, "[DEMO] Quản lý - Linh"),
-    ("demo.manager2", AppRoles.ClinicManager, "[DEMO] Quản lý dự phòng"),
-    ("demo.reception", AppRoles.Receptionist, "[DEMO] Lễ tân - Kiệt"),
-    ("demo.vet", AppRoles.Veterinarian, "[DEMO] Bác sĩ - Nghĩa"),
-    ("demo.vet2", AppRoles.Veterinarian, "[DEMO] Bác sĩ thứ hai"),
-    ("demo.pharmacy", AppRoles.DispensingStaff, "[DEMO] Cấp phát - Nghĩa"),
-    ("demo.cashier", AppRoles.Cashier, "[DEMO] Thu ngân"),
-    ("demo.client", AppRoles.Client, "[DEMO] Chủ nuôi An - Tùng"),
-    ("demo.client2", AppRoles.Client, "[DEMO] Chủ nuôi Bình"),
-    ("demo.client3", AppRoles.Client, "[DEMO] Chủ nuôi Chi")
+    ("demo.admin", AppRoles.Admin, "Quản trị"),
+    ("demo.manager", AppRoles.ClinicManager, "Quản lý"),
+    ("demo.manager2", AppRoles.ClinicManager, "Quản lý dự phòng"),
+    ("demo.reception", AppRoles.Receptionist, "Lễ tân"),
+    ("demo.vet", AppRoles.Veterinarian, "Bác sĩ"),
+    ("demo.vet2", AppRoles.Veterinarian, "Bác sĩ thứ hai"),
+    ("demo.pharmacy", AppRoles.DispensingStaff, "Cấp phát"),
+    ("demo.cashier", AppRoles.Cashier, "Thu ngân"),
+    ("demo.client", AppRoles.Client, "Chủ nuôi An"),
+    ("demo.client2", AppRoles.Client, "Chủ nuôi Bình"),
+    ("demo.client3", AppRoles.Client, "Chủ nuôi Chi")
 };
 // The team's nullable UNIQUE Clients.UserID permits only one anonymous client.
 // If that slot is already occupied, link the extra demo owner to a new demo login.
 var anonymousSlotUsed = await db.Clients.AnyAsync(x => x.UserID == null);
 if (anonymousSlotUsed)
-    accountSpecs = accountSpecs.Append(("demo.guest", AppRoles.Client, "[DEMO] Chủ nuôi bổ sung")).ToArray();
+    accountSpecs = accountSpecs.Append(("demo.guest", AppRoles.Client, "Chủ nuôi bổ sung")).ToArray();
 var today = ClinicTime.VnToday;
-var tag = "[DEMO " + today.ToString("yyyy-MM-dd") + "]";
 var password = "VcmsDemo!" + Convert.ToHexString(RandomNumberGenerator.GetBytes(5));
 var oldMedicines = await db.Medicines.AsNoTracking().OrderBy(x => x.MedicineID).ToListAsync();
 if (oldMedicines.Count(x => x.IsActive) < 3) throw new Exception("Expected the existing three active sample medicines.");
@@ -114,25 +113,25 @@ void Audit(string entity, int id, string action, object after, int? actor=null, 
 foreach (var user in users.Values) Audit("User",user.UserID,"DemoSeed",new{user.Username,user.RoleID,Note="Synthetic local debugging account; password omitted"});
 var owners = new List<Client>();
 for (var i=0;i<3;i++) owners.Add(new Client { UserID=U(i==0?"demo.client":"demo.client"+(i+1)),FullName=accountSpecs[8+i].Item3,Phone="090000000"+i,Address="Địa chỉ mô phỏng - không phải dữ liệu thật" });
-owners.Add(new Client { UserID=anonymousSlotUsed?U("demo.guest"):null,FullName="[DEMO] Chủ nuôi bổ sung",Phone="0900000009",Address="Hồ sơ khách vãng lai mô phỏng" });
+owners.Add(new Client { UserID=anonymousSlotUsed?U("demo.guest"):null,FullName="Chủ nuôi bổ sung",Phone="0900000009",Address="Hồ sơ khách vãng lai mô phỏng" });
 db.Clients.AddRange(owners); await db.SaveChangesAsync();
 var pets = new[] {
-    new Animal { ClientID=owners[0].ClientID,Name="[DEMO] Bông",Species="Mèo",Breed="Mèo ta",Gender="Female",WeightKg=3.25m },
-    new Animal { ClientID=owners[0].ClientID,Name="[DEMO] Mực",Species="Chó",Breed="Chó ta",Gender="Male",WeightKg=8.5m },
-    new Animal { ClientID=owners[1].ClientID,Name="[DEMO] Milo",Species="Chó",Gender="Male",WeightKg=6.2m },
-    new Animal { ClientID=owners[2].ClientID,Name="[DEMO] Luna",Species="Mèo",Gender="Female",WeightKg=2.75m },
-    new Animal { ClientID=owners[3].ClientID,Name="[DEMO] Nâu",Species="Chó",Gender="Unknown",WeightKg=5m },
-    new Animal { ClientID=owners[1].ClientID,Name="[DEMO] Hồ sơ ngừng hoạt động",Species="Mèo",Gender="Unknown",WeightKg=4m,IsActive=false }
+    new Animal { ClientID=owners[0].ClientID,Name="Bông",Species="Mèo",Breed="Mèo ta",Gender="Female",WeightKg=3.25m },
+    new Animal { ClientID=owners[0].ClientID,Name="Mực",Species="Chó",Breed="Chó ta",Gender="Male",WeightKg=8.5m },
+    new Animal { ClientID=owners[1].ClientID,Name="Milo",Species="Chó",Gender="Male",WeightKg=6.2m },
+    new Animal { ClientID=owners[2].ClientID,Name="Luna",Species="Mèo",Gender="Female",WeightKg=2.75m },
+    new Animal { ClientID=owners[3].ClientID,Name="Nâu",Species="Chó",Gender="Unknown",WeightKg=5m },
+    new Animal { ClientID=owners[1].ClientID,Name="Hồ sơ ngừng hoạt động",Species="Mèo",Gender="Unknown",WeightKg=4m,IsActive=false }
 };
 foreach(var pet in pets) { pet.DateOfBirth=today.AddYears(-2);pet.Notes="Dữ liệu mô phỏng để debug; không phải hồ sơ thật."; }
 db.Animals.AddRange(pets);
 for(var day=0;day<8;day++) foreach(var vetName in new[]{"demo.vet","demo.vet2"}) foreach(var hours in new[]{(8,12),(13,17)})
-    db.VeterinarianSchedules.Add(new VeterinarianSchedule { VeterinarianID=U(vetName),StartAt=ClinicTime.VnLocalToUtc(today.AddDays(day).AddHours(hours.Item1)),EndAt=ClinicTime.VnLocalToUtc(today.AddDays(day).AddHours(hours.Item2)),IsAvailable=true,Notes=tag+" Ca demo, giờ Việt Nam" });
-db.VeterinarianSchedules.Add(new VeterinarianSchedule{VeterinarianID=U("demo.vet"),StartAt=ClinicTime.VnLocalToUtc(today.AddDays(1).AddHours(10)),EndAt=ClinicTime.VnLocalToUtc(today.AddDays(1).AddHours(10.5)),IsAvailable=false,Notes=tag+" Khung giờ bị chặn demo"});
+    db.VeterinarianSchedules.Add(new VeterinarianSchedule { VeterinarianID=U(vetName),StartAt=ClinicTime.VnLocalToUtc(today.AddDays(day).AddHours(hours.Item1)),EndAt=ClinicTime.VnLocalToUtc(today.AddDays(day).AddHours(hours.Item2)),IsAvailable=true,Notes="Ca làm, giờ Việt Nam" });
+db.VeterinarianSchedules.Add(new VeterinarianSchedule{VeterinarianID=U("demo.vet"),StartAt=ClinicTime.VnLocalToUtc(today.AddDays(1).AddHours(10)),EndAt=ClinicTime.VnLocalToUtc(today.AddDays(1).AddHours(10.5)),IsAvailable=false,Notes="Khung giờ không khả dụng"});
 await db.SaveChangesAsync();
 var appointments = new List<Appointment>();
 Appointment Appt(int pet,int day,int minutes,string status,string scenario,bool otherVet=false) {
-    var a=new Appointment{AnimalID=pets[pet].AnimalID,VeterinarianID=U(otherVet?"demo.vet2":"demo.vet"),AppointmentTime=ClinicTime.VnLocalToUtc(today.AddDays(day).AddMinutes(minutes)),ExpectedDurationMinutes=30,Status=status,Reason=tag+" "+scenario,CreatedByUserID=U("demo.reception"),CancelledAt=status=="Cancelled"?ClinicTime.UtcNow:null};
+    var a=new Appointment{AnimalID=pets[pet].AnimalID,VeterinarianID=U(otherVet?"demo.vet2":"demo.vet"),AppointmentTime=ClinicTime.VnLocalToUtc(today.AddDays(day).AddMinutes(minutes)),ExpectedDurationMinutes=30,Status=status,Reason=scenario,CreatedByUserID=U("demo.reception"),CancelledAt=status=="Cancelled"?ClinicTime.UtcNow:null};
     db.Appointments.Add(a);appointments.Add(a);return a;
 }
 Appt(0,0,480,"Confirmed","01 - Chưa check-in, lễ tân có thể tiếp nhận");
@@ -163,8 +162,8 @@ var completedVisit=VisitFor(completed,"Completed","Done");
 VisitFor(other,"Waiting","Waiting");
 await db.SaveChangesAsync();
 foreach(var a in appointments) Audit("Appointment",a.AppointmentID,"DemoSeed",new{a.Status,a.Reason,a.AppointmentTime},U("demo.reception"));
-var inactive=new Medicine{MedicineName="[DEMO] Thuốc mô phỏng ngừng dùng",Unit="Viên",CurrentPrice=12000m,IsActive=false};
-var lowStock=new Medicine{MedicineName="[DEMO] Thuốc mô phỏng tồn thấp",Unit="Hộp",CurrentPrice=25000m,IsActive=true};
+var inactive=new Medicine{MedicineName="Thuốc mô phỏng ngừng dùng",Unit="Viên",CurrentPrice=12000m,IsActive=false};
+var lowStock=new Medicine{MedicineName="Thuốc mô phỏng tồn thấp",Unit="Hộp",CurrentPrice=25000m,IsActive=true};
 db.Medicines.AddRange(inactive,lowStock);await db.SaveChangesAsync();
 var medicines=oldMedicines.Where(x=>x.IsActive).Take(3).Append(lowStock).ToArray();
 var batches=new Dictionary<int,MedicineBatch>();
@@ -172,15 +171,15 @@ foreach(var med in medicines) foreach(var seq in med.MedicineID==lowStock.Medici
     var quantity=med.MedicineID==lowStock.MedicineID?2:seq==1?100:50;
     var b=new MedicineBatch{MedicineID=med.MedicineID,BatchNumber="DEMO-"+today.ToString("yyyyMMdd")+"-"+med.MedicineID+"-"+seq,ExpiryDate=today.AddMonths(seq==1?3:12),ReceivedAt=ClinicTime.VnLocalToUtc(today.AddDays(-7).AddHours(10)),PurchaseUnitCost=decimal.Round(med.CurrentPrice*.6m,2),QuantityOnHand=quantity};
     db.MedicineBatches.Add(b);await db.SaveChangesAsync();if(seq==1)batches[med.MedicineID]=b;
-    db.StockMovements.Add(new StockMovement{BatchID=b.BatchID,MovementType="Receipt",QuantityChange=quantity,PerformedByUserID=U("demo.pharmacy"),Reason=tag+" Nhập kho khởi tạo dữ liệu demo",CreatedAt=b.ReceivedAt});
+    db.StockMovements.Add(new StockMovement{BatchID=b.BatchID,MovementType="Receipt",QuantityChange=quantity,PerformedByUserID=U("demo.pharmacy"),Reason="Nhập kho khởi tạo dữ liệu mô phỏng",CreatedAt=b.ReceivedAt});
     Audit("MedicineBatch",b.BatchID,"Receive",new{b.QuantityOnHand,quantity,Reason="Nhập dữ liệu demo"},U("demo.pharmacy"),new{QuantityOnHand=0});
 }
 var prescriptions=new List<Prescription>();
 async Task<Prescription> Clinical(Visit v,bool final,bool corrected=false) {
-    var e=new Encounter{VisitID=v.VisitID,VeterinarianID=U("demo.vet"),Symptoms="[DEMO] Triệu chứng mô phỏng",ExaminationNotes="Chỉ để kiểm tra phần mềm, không phải tư vấn y khoa.",Diagnosis=final?"[DEMO] Chẩn đoán mô phỏng":null,Status=corrected?"Corrected":final?"Finalized":"Draft",ExaminedAt=v.CheckInAt.AddMinutes(10),FinalizedAt=final?v.CheckInAt.AddMinutes(15):null};
+    var e=new Encounter{VisitID=v.VisitID,VeterinarianID=U("demo.vet"),Symptoms="Triệu chứng mô phỏng",ExaminationNotes="Chỉ để kiểm tra phần mềm, không phải tư vấn y khoa.",Diagnosis=final?"Chẩn đoán mô phỏng":null,Status=corrected?"Corrected":final?"Finalized":"Draft",ExaminedAt=v.CheckInAt.AddMinutes(10),FinalizedAt=final?v.CheckInAt.AddMinutes(15):null};
     db.Encounters.Add(e);await db.SaveChangesAsync();
     Audit("Encounter",e.EncounterID,final?"Finalize":"SaveDraft",new{e.Symptoms,e.Diagnosis,Status=final?"Finalized":"Draft"},U("demo.vet"));
-    if(corrected)Audit("Encounter",e.EncounterID,"Correct",new{e.Diagnosis,e.Status,CorrectionReason="[DEMO] Minh họa lưu lịch sử hiệu chỉnh"},U("demo.vet"),new{Diagnosis="[DEMO] Chẩn đoán trước hiệu chỉnh",Status="Finalized"});
+    if(corrected)Audit("Encounter",e.EncounterID,"Correct",new{e.Diagnosis,e.Status,CorrectionReason="Minh họa lưu lịch sử hiệu chỉnh"},U("demo.vet"),new{Diagnosis="Chẩn đoán trước hiệu chỉnh",Status="Finalized"});
     var rx=new Prescription{EncounterID=e.EncounterID,PrescribedByUserID=U("demo.vet"),Status=final?"Finalized":"Draft",Instructions="DỮ LIỆU MÔ PHỎNG - KHÔNG DÙNG ĐIỀU TRỊ",CreatedAt=e.ExaminedAt,FinalizedAt=final?e.FinalizedAt:null};
     db.Prescriptions.Add(rx);await db.SaveChangesAsync();prescriptions.Add(rx);
     foreach(var med in medicines.Take(2))db.PrescriptionItems.Add(new PrescriptionItem{PrescriptionID=rx.PrescriptionID,MedicineID=med.MedicineID,Quantity=6,Dosage="DEMO - không dùng điều trị",Frequency="Giá trị mô phỏng",DurationDays=3,Instructions="Chỉ thử giao diện và luồng cấp phát"});
@@ -199,7 +198,7 @@ var completedRx=await Clinical(completedVisit,true,true);
 async Task Issue(Prescription rx,int quantity) {
     var d=new Dispensation{PrescriptionID=rx.PrescriptionID,DispensedByUserID=U("demo.pharmacy"),Status="Completed",RequestKey=Guid.NewGuid(),DispensedAt=rx.FinalizedAt!.Value.AddMinutes(5)};
     var lines=await db.PrescriptionItems.Include(x=>x.Medicine).Where(x=>x.PrescriptionID==rx.PrescriptionID).ToListAsync();
-    foreach(var line in lines){var b=batches[line.MedicineID];b.QuantityOnHand-=quantity;var item=new DispensationItem{PrescriptionItemID=line.PrescriptionItemID,BatchID=b.BatchID,Quantity=quantity,UnitPrice=line.Medicine.CurrentPrice};d.Items.Add(item);db.StockMovements.Add(new StockMovement{BatchID=b.BatchID,DispensationItem=item,MovementType="Dispense",QuantityChange=-quantity,PerformedByUserID=U("demo.pharmacy"),Reason=tag+" Cấp phát demo",CreatedAt=ClinicTime.UtcNow});}
+    foreach(var line in lines){var b=batches[line.MedicineID];b.QuantityOnHand-=quantity;var item=new DispensationItem{PrescriptionItemID=line.PrescriptionItemID,BatchID=b.BatchID,Quantity=quantity,UnitPrice=line.Medicine.CurrentPrice};d.Items.Add(item);db.StockMovements.Add(new StockMovement{BatchID=b.BatchID,DispensationItem=item,MovementType="Dispense",QuantityChange=-quantity,PerformedByUserID=U("demo.pharmacy"),Reason="Cấp phát dữ liệu mô phỏng",CreatedAt=ClinicTime.UtcNow});}
     db.Dispensations.Add(d);await db.SaveChangesAsync();Audit("Dispensation",d.DispensationID,"Complete",new{rx.PrescriptionID,d.RequestKey,Note="Synthetic demo dispensing"},U("demo.pharmacy"));
 }
 await Issue(partialRx,2);await Issue(completedRx,6);await db.SaveChangesAsync();
@@ -217,7 +216,7 @@ var note=new StringBuilder("# Tài khoản và dữ liệu demo local VCMS\n\n")
 note.AppendLine($"Tạo ngày {today:dd/MM/yyyy}, DB `{connectionInfo.DataSource} / {connectionInfo.InitialCatalog}`, branch `integration/nghia-kiet-linh-20261113`. Chỉ dữ liệu mô phỏng để debug; giữ nguyên schema.\n");
 note.AppendLine($"**Mật khẩu chung cho các tài khoản dưới đây:** `{password}`\n");
 note.AppendLine("| Username | Role | Dùng để kiểm tra |\n|---|---|---|");
-foreach(var spec in accountSpecs)note.AppendLine($"| `{spec.Item1}` | {spec.Item2} | {spec.Item3.Replace("[DEMO] ","")} |");
+foreach(var spec in accountSpecs)note.AppendLine($"| `{spec.Item1}` | {spec.Item2} | {spec.Item3} |");
 note.AppendLine("\nTất cả tài khoản active; mật khẩu lưu trong DB bằng ASP.NET Core PasswordHasher. Tài khoản manager2 giữ được ít nhất một quản lý hoạt động khi thử khóa tài khoản. vet2/client2/client3 hỗ trợ kiểm tra phân quyền theo bác sĩ/chủ nuôi. Không có role PetGroomer trong schema nhóm; không thêm role đó. Thu ngân đăng nhập được nhưng chức năng thanh toán chưa được triển khai.\n");
 note.AppendLine("## Luồng demo theo thành viên\n\n- **Tùng:** 4 chủ nuôi, 6 thú cưng (1 hồ sơ inactive), lịch hẹn hôm nay/ngày mai gồm Pending/Confirmed/CheckedIn/Completed/Cancelled/NoShow; ca bác sĩ 8 ngày và khung giờ chặn 10:00–10:30 ngày mai. Đăng nhập demo.client để đặt/đổi/hủy lịch của mình.\n- **Kiệt:** demo.reception xem lịch hôm nay, tiếp nhận ca 01; hàng đợi có ca Waiting/Serving/Done. demo.admin/demo.manager quản lý tài khoản.\n- **Nghĩa:** demo.vet xem ca chờ mở bệnh án, ca có bệnh án/đơn nháp, đơn đã chốt; demo.pharmacy xem đơn chưa cấp, cấp một phần (2/6 mỗi dòng) và cấp đủ, lô/tồn kho/sổ kho. Có thuốc ngừng dùng và thuốc tồn thấp. Các nội dung thuốc/chẩn đoán chỉ là giá trị mô phỏng, không dùng điều trị.\n- **Linh:** có AuditLogs cho khởi tạo, chốt, hiệu chỉnh, nhập/xuất; dữ liệu lượt khám phục vụ thống kê. Code hiện chưa có màn hình dashboard/audit administration, nên đăng nhập manager không tạo ra những màn hình chưa triển khai. Có thể xem dữ liệu nền trong SSMS.\n");
 note.AppendLine("## Điểm truy cập cụ thể\n");
