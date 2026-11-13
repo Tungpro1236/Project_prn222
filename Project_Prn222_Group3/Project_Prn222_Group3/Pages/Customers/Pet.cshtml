@@ -1,0 +1,68 @@
+@page "{clientId:int}"
+@model Project_Prn222_Group3.Pages.Customers.PetModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Sửa thú cưng" : "Thêm thú cưng";
+}
+
+<div class="mb-4">
+    <a asp-page="Details" asp-route-id="@Model.ClientId" class="small text-decoration-none">&larr; @Model.ClientName</a>
+    <h1 class="h3 mt-2 mb-1">@ViewData["Title"]</h1>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Input.Name" class="form-label">Tên</label>
+                    <input asp-for="Input.Name" class="form-control" />
+                    <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Species" class="form-label">Loài</label>
+                    <input asp-for="Input.Species" class="form-control" placeholder="Chó, Mèo..." />
+                    <span asp-validation-for="Input.Species" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Breed" class="form-label">Giống</label>
+                    <input asp-for="Input.Breed" class="form-control" />
+                    <span asp-validation-for="Input.Breed" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Gender" class="form-label">Giới tính</label>
+                    <select asp-for="Input.Gender" asp-items="Model.GenderOptions" class="form-select"></select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.DateOfBirth" class="form-label">Ngày sinh</label>
+                    <input asp-for="Input.DateOfBirth" type="date" class="form-control" />
+                    <span asp-validation-for="Input.DateOfBirth" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.WeightKg" class="form-label">Cân nặng (kg)</label>
+                    <input asp-for="Input.WeightKg" class="form-control" />
+                    <span asp-validation-for="Input.WeightKg" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Input.Notes" class="form-label">Ghi chú</label>
+                    <textarea asp-for="Input.Notes" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="Input.Notes" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="Input.IsActive" class="form-check-input" />
+                        <label asp-for="Input.IsActive" class="form-check-label">Đang theo dõi</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-vcms">Lưu thú cưng</button>
+                <a asp-page="Details" asp-route-id="@Model.ClientId" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

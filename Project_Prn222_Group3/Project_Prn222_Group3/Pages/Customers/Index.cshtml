@@ -1,0 +1,59 @@
+@page
+@model Project_Prn222_Group3.Pages.Customers.IndexModel
+@{
+    ViewData["Title"] = "Khách hàng";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Hồ sơ khách hàng</h1>
+        <p class="text-muted mb-0">Tìm chủ nuôi theo tên, số điện thoại, email hoặc tên thú cưng.</p>
+    </div>
+    <a asp-page="Create" class="btn btn-vcms">+ Thêm khách hàng</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-sm-7 col-md-5">
+        <input name="q" value="@Model.Q" class="form-control" placeholder="Tên, số điện thoại, email hoặc thú cưng" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Tìm</button>
+    </div>
+</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Chủ nuôi</th>
+                    <th>Điện thoại</th>
+                    <th>Email</th>
+                    <th>Thú cưng</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Clients.Count == 0)
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">Không tìm thấy khách hàng.</td></tr>
+            }
+            else
+            {
+                @foreach (var client in Model.Clients)
+                {
+                    <tr>
+                        <td class="fw-semibold">@client.FullName</td>
+                        <td>@client.Phone</td>
+                        <td>@(client.Email ?? "—")</td>
+                        <td>@client.Animals.Count(a => a.IsActive)</td>
+                        <td class="text-end">
+                            <a asp-page="Details" asp-route-id="@client.ClientID" class="btn btn-sm btn-outline-primary">Xem</a>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
