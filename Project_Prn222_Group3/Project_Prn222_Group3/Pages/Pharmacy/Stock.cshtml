@@ -1,0 +1,31 @@
+@page
+@model Project_Prn222_Group3.Pages.Pharmacy.StockModel
+@{ ViewData["Title"] = "Kho thuốc"; }
+<a asp-page="Index">← Nhà thuốc</a><h1 class="h3 mt-3">Kho thuốc</h1>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<div class="row g-4 mb-4">
+<section class="col-lg-6"><h2 class="h5">Nhập thuốc theo lô</h2>
+<form method="post" asp-page-handler="Receive">
+    <div class="mb-3"><label for="medicine" class="form-label">Thuốc</label><select id="medicine" name="medicineId" class="form-select" required><option value="">Chọn thuốc</option>@foreach (var med in Model.Medicines) { <option value="@med.MedicineID">@med.MedicineName (@med.Unit)</option> }</select></div>
+    <div class="mb-3"><label for="batch" class="form-label">Mã lô</label><input id="batch" name="batchNumber" class="form-control" maxlength="80" required /></div>
+    <div class="mb-3"><label for="expiry" class="form-label">Hạn dùng</label><input id="expiry" name="expiry" class="form-control" type="date" required min="@ClinicTime.VnToday.ToString("yyyy-MM-dd")" /></div>
+    <div class="row"><div class="col-sm-6 mb-3"><label for="quantity" class="form-label">Số lượng nhập</label><input id="quantity" name="quantity" class="form-control" type="number" min="1" max="1000000" required /></div><div class="col-sm-6 mb-3"><label for="cost" class="form-label">Giá nhập / đơn vị (VND)</label><input id="cost" name="cost" class="form-control" type="number" min="0" max="1000000000" step="0.01" /></div></div>
+    <div class="mb-3"><label for="receive-reason" class="form-label">Ghi chú nhập</label><input id="receive-reason" name="reason" class="form-control" maxlength="500" /></div>
+    <button class="btn btn-vcms">Ghi nhận nhập kho</button>
+</form></section>
+<section class="col-lg-6"><h2 class="h5">Điều chỉnh tồn kho</h2><p class="text-muted">Nhập số dương để tăng, số âm để giảm. Mọi điều chỉnh phải có lý do.</p>
+<form method="post" asp-page-handler="Adjust">
+    <div class="mb-3"><label for="adjust-batch" class="form-label">Lô thuốc</label><select id="adjust-batch" name="batchId" class="form-select" required><option value="">Chọn lô</option>@foreach (var batch in Model.Batches) { <option value="@batch.BatchID">@batch.Medicine.MedicineName · @batch.BatchNumber · Tồn @batch.QuantityOnHand</option> }</select></div>
+    <div class="mb-3"><label for="delta" class="form-label">Mức điều chỉnh</label><input id="delta" name="delta" class="form-control" type="number" min="-1000000" max="1000000" required /></div>
+    <div class="mb-3"><label for="adjust-reason" class="form-label">Lý do điều chỉnh</label><textarea id="adjust-reason" name="reason" class="form-control" maxlength="500" rows="3" required></textarea></div>
+    <button class="btn btn-outline-primary">Lưu điều chỉnh kho</button>
+</form></section>
+</div>
+<section class="border-top pt-4 mb-4"><h2 class="h5">Tồn theo lô</h2><div class="table-responsive"><table class="table"><thead><tr><th>Thuốc</th><th>Mã lô</th><th>Hạn dùng</th><th>Tồn</th><th>Giá nhập</th></tr></thead><tbody>
+@if (Model.Batches.Count == 0) { <tr><td colspan="5">Chưa có lô thuốc. Nhập lô đầu tiên ở biểu mẫu trên.</td></tr> }
+@foreach (var batch in Model.Batches) { <tr><td>@batch.Medicine.MedicineName</td><td>@batch.BatchNumber</td><td>@batch.ExpiryDate.ToString("dd/MM/yyyy") @(batch.ExpiryDate.Date < ClinicTime.VnToday ? "· Hết hạn" : "")</td><td>@batch.QuantityOnHand</td><td>@batch.PurchaseUnitCost?.ToString("N2")</td></tr> }
+</tbody></table></div></section>
+<section class="border-top pt-4"><h2 class="h5">Sổ kho · 200 thao tác gần nhất</h2><div class="table-responsive"><table class="table"><thead><tr><th>Thời gian</th><th>Thuốc / lô</th><th>Loại</th><th>Thay đổi</th><th>Người ghi / lý do</th></tr></thead><tbody>
+@if (Model.Movements.Count == 0) { <tr><td colspan="5">Chưa có biến động kho.</td></tr> }
+@foreach (var movement in Model.Movements) { <tr><td>@ClinicTime.Format(movement.CreatedAt)</td><td>@movement.Batch.Medicine.MedicineName · @movement.Batch.BatchNumber</td><td>@CareText.Movement(movement.MovementType)</td><td>@movement.QuantityChange.ToString("+0;-0;0")</td><td>@movement.PerformedBy.FullName <span class="d-block text-muted small">@movement.Reason</span></td></tr> }
+</tbody></table></div></section>

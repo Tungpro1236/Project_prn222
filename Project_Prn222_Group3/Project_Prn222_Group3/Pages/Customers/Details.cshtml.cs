@@ -38,7 +38,6 @@ public class DetailsModel : PageModel
         Appointments = await _db.Appointments
             .Include(a => a.Animal)
             .Include(a => a.Veterinarian)
-            .Include(a => a.Service)
             .Where(a => a.Animal.ClientID == id)
             .OrderByDescending(a => a.AppointmentTime)
             .Take(20)

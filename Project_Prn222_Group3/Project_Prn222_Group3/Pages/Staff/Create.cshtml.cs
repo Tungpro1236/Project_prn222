@@ -69,7 +69,7 @@ public class CreateModel : PageModel
             ModelState.AddModelError("Input.RoleID", "Vai trò không hợp lệ.");
         }
 
-        var username = Input.Username.Trim();
+        var username = Input.Username?.Trim() ?? string.Empty;
         var email = string.IsNullOrWhiteSpace(Input.Email) ? null : Input.Email.Trim();
         var phone = string.IsNullOrWhiteSpace(Input.Phone) ? null : Input.Phone.Trim();
 

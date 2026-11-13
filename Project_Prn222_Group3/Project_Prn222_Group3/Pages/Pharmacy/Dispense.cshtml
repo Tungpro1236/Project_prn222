@@ -1,0 +1,39 @@
+@page "{id:int}"
+@model Project_Prn222_Group3.Pages.Pharmacy.DispenseModel
+@{ ViewData["Title"] = "Cấp thuốc"; }
+<a asp-page="Index">← Nhà thuốc</a><h1 class="h3 mt-3">Cấp thuốc · Đơn #@Model.Record.PrescriptionID</h1>
+<p>@Model.Record.Encounter.Visit.Appointment.Animal.Name · @CareText.Status(Model.Record.Status)</p>
+<p>Hướng dẫn chung: @Model.Record.Instructions</p>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<h2 class="h5">Số lượng theo đơn</h2>
+<div class="table-responsive mb-4"><table class="table"><thead><tr><th>Thuốc</th><th>Đã kê</th><th>Còn phải cấp</th><th>Cách dùng</th></tr></thead><tbody>
+@foreach (var item in Model.Record.Items) { <tr><td>@Model.MedicineName(item) (@Model.MedicineUnit(item))</td><td>@item.Quantity</td><td>@Model.Remaining[item.PrescriptionItemID]</td><td>@item.Dosage · @item.Frequency · @item.DurationDays ngày<br />@item.Instructions</td></tr> }
+</tbody></table></div>
+@if (Model.Record.Status == "Finalized" && Model.Options.Count > 0)
+{
+    <form method="post" class="mb-4">
+    <input asp-for="RequestKey" type="hidden" />
+    <h2 class="h5">Chọn lô để cấp</h2><p class="text-muted">Lô gần hết hạn được xếp trước. Để 0 cho lô không sử dụng. Có thể chia số lượng qua nhiều lô.</p>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Thuốc</th><th>Lô / hạn dùng</th><th>Tồn</th><th>Số lượng cấp</th></tr></thead><tbody>
+    @for (var i = 0; i < Model.Options.Count; i++)
+    {
+        var option = Model.Options[i]; var limit = Math.Min(Model.Remaining[option.Item.PrescriptionItemID], option.Batch.QuantityOnHand);
+        <tr><td>@Model.MedicineName(option.Item)</td><td>@option.Batch.BatchNumber · @option.Batch.ExpiryDate.ToString("dd/MM/yyyy")</td><td>@option.Batch.QuantityOnHand</td><td>
+            <input type="hidden" name="Lines[@i].PrescriptionItemId" value="@option.Item.PrescriptionItemID" /><input type="hidden" name="Lines[@i].BatchId" value="@option.Batch.BatchID" />
+            <label class="visually-hidden" for="issue-@i">Số lượng cấp @Model.MedicineName(option.Item) lô @option.Batch.BatchNumber</label><input id="issue-@i" name="Lines[@i].Quantity" type="number" min="0" max="@limit" value="0" class="form-control" required />
+        </td></tr>
+    }
+    </tbody></table></div><button class="btn btn-vcms">Xác nhận cấp thuốc</button>
+    </form>
+}
+else { <p class="alert alert-light border">Không có lô phù hợp để cấp thêm. Kiểm tra trạng thái đơn, số lượng còn lại và tồn kho.</p> }
+<section class="border-top pt-4"><h2 class="h5">Lịch sử cấp thuốc</h2>
+@if (Model.History.Count == 0) { <p>Đơn chưa được cấp thuốc.</p> }
+@foreach (var entry in Model.History)
+{
+    <h3 class="h6 mt-3">Phiếu #@entry.DispensationID · @CareText.Status(entry.Status) · @entry.DispensedBy.FullName · @(entry.DispensedAt is null ? "—" : ClinicTime.Format(entry.DispensedAt.Value))</h3>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Dòng thuốc</th><th>Lô</th><th>Số lượng</th><th>Đơn giá lúc chốt</th></tr></thead><tbody>
+    @foreach (var item in entry.Items) { <tr><td>@Model.MedicineName(Model.Record.Items.Single(x => x.PrescriptionItemID == item.PrescriptionItemID))</td><td>@item.Batch.BatchNumber</td><td>@item.Quantity</td><td>@item.UnitPrice.ToString("N2") ₫</td></tr> }
+    </tbody></table></div>
+}
+</section>

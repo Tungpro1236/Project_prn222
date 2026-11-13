@@ -1,0 +1,19 @@
+@page
+@model Project_Prn222_Group3.Pages.Examination.IndexModel
+@{ ViewData["Title"] = "Khám bệnh"; }
+<h1 class="h3 mb-2">Khám bệnh</h1>
+<p class="text-muted">Các lượt đã check-in gần nhất. Mở lượt khám để ghi bệnh án và kê đơn.</p>
+<div class="table-responsive">
+<table class="table align-middle">
+    <thead><tr><th>Lượt khám</th><th>Thú cưng / chủ nuôi</th><th>Check-in</th><th>Bệnh án</th><th>Thao tác</th></tr></thead>
+    <tbody>
+    @if (Model.Visits.Count == 0) { <tr><td colspan="5">Chưa có lượt khám được phân công. Lễ tân cần check-in lịch hẹn trước.</td></tr> }
+    @foreach (var visit in Model.Visits)
+    {
+        <tr><td>#@visit.VisitID</td><td>@visit.Appointment.Animal.Name <span class="d-block text-muted small">@visit.Appointment.Animal.Client.FullName</span></td>
+            <td>@ClinicTime.Format(visit.CheckInAt)</td><td>@(visit.Encounter is null ? "Chưa ghi" : CareText.Status(visit.Encounter.Status))</td>
+            <td><a asp-page="Edit" asp-route-visitId="@visit.VisitID" class="btn btn-sm btn-outline-primary">Mở bệnh án</a></td></tr>
+    }
+    </tbody>
+</table>
+</div>

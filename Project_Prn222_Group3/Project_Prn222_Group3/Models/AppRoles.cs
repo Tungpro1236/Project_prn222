@@ -11,20 +11,22 @@ public static class AppRoles
     public const string ClinicManager = "ClinicManager";
     public const string PetGroomer = "PetGroomer";
 
+    public const string PharmacyStaff = Admin + "," + ClinicManager + "," + DispensingStaff;
+    public const string ClinicalReaders = Admin + "," + Veterinarian;
     public const string Managers = Admin + "," + ClinicManager;
     public const string ReceptionDesk = Admin + "," + Receptionist + "," + ClinicManager;
     public const string RecordEditors = Admin + "," + Receptionist + "," + ClinicManager;
     public const string Bookers = Admin + "," + Receptionist + "," + ClinicManager + "," + Client;
-    public const string AppointmentViewers = Bookers + "," + Veterinarian + "," + PetGroomer;
+    public const string AppointmentViewers = Bookers + "," + Veterinarian;
 
     public static readonly string[] StaffRoleNames =
     [
-        Admin, Receptionist, Veterinarian, DispensingStaff, Cashier, ClinicManager, PetGroomer
+        Admin, Receptionist, Veterinarian, DispensingStaff, Cashier, ClinicManager
     ];
 
     public static readonly string[] SchedulableRoleNames =
     [
-        Veterinarian, PetGroomer
+        Veterinarian
     ];
 
     public static string HomePath(string? roleName) => roleName switch
@@ -32,7 +34,8 @@ public static class AppRoles
         Receptionist => "/Reception/Queue",
         ClinicManager or Admin => "/Staff",
         Client => "/Client",
-        Veterinarian or PetGroomer => "/Appointments",
+        Veterinarian => "/Examination",
+        DispensingStaff => "/Pharmacy",
         _ => "/Index"
     };
 

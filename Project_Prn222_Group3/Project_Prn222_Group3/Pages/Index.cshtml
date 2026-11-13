@@ -22,13 +22,16 @@
                 <p class="text-muted mb-0">Tạo tài khoản, gán vai trò và khóa tài khoản nhân viên.</p>
             </a>
         </div>
-        <div class="col-md-6 col-xl-4">
-            <a asp-page="/Clinic/Settings" class="dashboard-card">
-                <div class="dashboard-icon">PK</div>
-                <h2 class="h5 mt-3">Cấu hình phòng khám</h2>
-                <p class="text-muted mb-0">Giờ mở cửa, khung giờ, dịch vụ và lịch làm việc.</p>
-            </a>
-        </div>
+
+    }
+
+    @if (User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.Admin))
+    {
+        <div class="col-md-6 col-xl-4"><a asp-page="/Examination/Index" class="dashboard-card"><h2 class="h5">Khám bệnh và kê đơn</h2><p class="text-muted mb-0">Ghi bệnh án, hiệu chỉnh và kê đơn cho lượt khám.</p></a></div>
+    }
+    @if (User.IsInRole(AppRoles.DispensingStaff) || User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.ClinicManager))
+    {
+        <div class="col-md-6 col-xl-4"><a asp-page="/Pharmacy/Index" class="dashboard-card"><h2 class="h5">Nhà thuốc</h2><p class="text-muted mb-0">Quản lý thuốc, tồn theo lô và cấp theo đơn.</p></a></div>
     }
 
     @if (Model.CanEditRecords)
@@ -50,7 +53,7 @@
                 <h2 class="h5 mt-3">@(Model.CanBook ? "Đặt lịch hẹn" : "Lịch hẹn của tôi")</h2>
                 <p class="text-muted mb-0">
                     @(Model.CanBook
-                        ? "Chọn dịch vụ và khung giờ còn trống, không trùng ca nghỉ."
+                        ? "Chọn bác sĩ và khung giờ còn trống trong lịch làm việc."
                         : "Xem các lịch hẹn được phân cho bạn. Bạn không đặt hoặc đổi lịch.")
                 </p>
             </a>
@@ -95,7 +98,7 @@
     </div>
 </div>
 
-@if (!Model.CanManageAccounts && !Model.CanWorkAtReception && !Model.CanEditRecords && !Model.CanViewAppointments)
+@if (!Model.CanManageAccounts && !Model.CanWorkAtReception && !Model.CanEditRecords && !Model.CanViewAppointments && !User.IsInRole(AppRoles.DispensingStaff))
 {
     <div class="alert alert-light border mt-4 mb-0">
         Các chức năng dành cho vai trò của bạn đang được nhóm phát triển.

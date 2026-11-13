@@ -1,0 +1,55 @@
+@page "{id:int}"
+@model Project_Prn222_Group3.Pages.Examination.PrescriptionModel
+@{ ViewData["Title"] = "Đơn thuốc"; }
+<a asp-page="Edit" asp-route-visitId="@Model.Record.Encounter.VisitID">← Bệnh án</a>
+<h1 class="h3 mt-3">Đơn thuốc #@Model.Record.PrescriptionID · @Model.Record.Encounter.Visit.Appointment.Animal.Name</h1>
+<p>@CareText.Status(Model.Record.Status) · Chốt đơn không làm thay đổi tồn kho.</p>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<div class="table-responsive mb-4"><table class="table"><thead><tr><th>Thuốc</th><th>Số lượng</th><th>Cách dùng</th><th>Thao tác</th></tr></thead><tbody>
+@if (Model.Record.Items.Count == 0) { <tr><td colspan="4">Đơn chưa có thuốc. Thêm dòng thuốc trước khi chốt.</td></tr> }
+@foreach (var item in Model.Record.Items)
+{
+    <tr><td>@Model.MedicineName(item) <span class="d-block text-muted small">@Model.MedicineUnit(item)</span></td><td>@item.Quantity</td>
+    <td>@item.Dosage · @item.Frequency <span class="d-block">@item.DurationDays ngày · @item.Instructions</span></td><td>
+    @if (Model.CanEdit)
+    {
+        <details><summary>Sửa dòng</summary>
+        <form method="post" asp-page-handler="Item" class="mt-2">
+            <input type="hidden" name="itemId" value="@item.PrescriptionItemID" /><input type="hidden" name="medicineId" value="@item.MedicineID" />
+            <label class="form-label" for="qty-@item.PrescriptionItemID">Số lượng</label><input id="qty-@item.PrescriptionItemID" class="form-control mb-2" name="quantity" type="number" min="1" max="1000000" value="@item.Quantity" required />
+            <label class="form-label" for="dose-@item.PrescriptionItemID">Liều dùng</label><input id="dose-@item.PrescriptionItemID" class="form-control mb-2" name="dosage" value="@item.Dosage" maxlength="200" required />
+            <label class="form-label" for="freq-@item.PrescriptionItemID">Tần suất</label><input id="freq-@item.PrescriptionItemID" class="form-control mb-2" name="frequency" value="@item.Frequency" maxlength="200" />
+            <label class="form-label" for="days-@item.PrescriptionItemID">Số ngày</label><input id="days-@item.PrescriptionItemID" class="form-control mb-2" name="durationDays" type="number" min="1" value="@item.DurationDays" />
+            <label class="form-label" for="note-@item.PrescriptionItemID">Hướng dẫn</label><input id="note-@item.PrescriptionItemID" class="form-control mb-2" name="instructions" maxlength="500" value="@item.Instructions" />
+            <button class="btn btn-sm btn-outline-primary">Lưu dòng thuốc</button>
+        </form></details>
+        <form method="post" asp-page-handler="Delete" class="mt-2"><input type="hidden" name="itemId" value="@item.PrescriptionItemID" /><button class="btn btn-sm btn-outline-danger">Xóa dòng</button></form>
+    }
+    </td></tr>
+}
+</tbody></table></div>
+@if (Model.CanEdit)
+{
+    <section class="border-top pt-4 mb-4"><h2 class="h5">Thêm thuốc</h2>
+    <form method="post" asp-page-handler="Item" class="row g-3">
+        <div class="col-md-6"><label for="medicine" class="form-label">Thuốc</label><select id="medicine" name="medicineId" class="form-select" required><option value="">Chọn thuốc</option>@foreach (var med in Model.Medicines) { <option value="@med.MedicineID">@med.MedicineName (@med.Unit)</option> }</select></div>
+        <div class="col-md-3"><label for="quantity" class="form-label">Số lượng</label><input id="quantity" name="quantity" class="form-control" type="number" min="1" max="1000000" required /></div>
+        <div class="col-md-3"><label for="days" class="form-label">Số ngày</label><input id="days" name="durationDays" class="form-control" type="number" min="1" /></div>
+        <div class="col-md-6"><label for="dosage" class="form-label">Liều dùng</label><input id="dosage" name="dosage" class="form-control" maxlength="200" required /></div>
+        <div class="col-md-6"><label for="frequency" class="form-label">Tần suất</label><input id="frequency" name="frequency" class="form-control" maxlength="200" /></div>
+        <div class="col-12"><label for="instructions" class="form-label">Hướng dẫn cho dòng thuốc</label><input id="instructions" name="instructions" class="form-control" maxlength="500" /></div>
+        <div class="col-12"><button class="btn btn-outline-primary">Thêm vào đơn</button></div>
+    </form></section>
+    <form method="post" asp-page-handler="Finalize" class="border-top pt-4 mb-4">
+        <label for="rx-instructions" class="form-label">Hướng dẫn chung khi chốt đơn</label><textarea id="rx-instructions" name="instructions" class="form-control mb-3" maxlength="1000" rows="2">@Model.Record.Instructions</textarea>
+        <button class="btn btn-vcms">Chốt đơn thuốc</button><p class="form-text">Sau khi chốt, các dòng thuốc được khóa và chuyển sang bước cấp thuốc.</p>
+    </form>
+}
+else { <p>Hướng dẫn: @Model.Record.Instructions</p> }
+@if (Model.CanWrite && Model.Record.Status != "Cancelled")
+{
+    <details class="mb-4"><summary>Hủy đơn chưa cấp thuốc</summary><form method="post" asp-page-handler="Cancel" class="mt-2"><label for="cancel-reason" class="form-label">Lý do hủy</label><input id="cancel-reason" name="reason" class="form-control mb-2" required maxlength="500" /><button class="btn btn-outline-danger">Hủy đơn thuốc</button></form></details>
+}
+<section class="border-top pt-4"><h2 class="h5">Lịch sử đơn thuốc</h2>
+@foreach (var log in Model.History) { <details class="mb-2"><summary>@ClinicTime.Format(log.OccurredAt) · @CareText.Action(log.Action)</summary><pre class="text-wrap mt-2">@log.OldValues</pre><pre class="text-wrap">@log.NewValues</pre></details> }
+</section>

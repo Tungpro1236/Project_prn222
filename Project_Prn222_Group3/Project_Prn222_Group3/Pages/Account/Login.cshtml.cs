@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Project_Prn222_Group3.Data;
 using Project_Prn222_Group3.Models;
+using Project_Prn222_Group3.Services;
 
 namespace Project_Prn222_Group3.Pages.Account;
 
@@ -87,7 +88,9 @@ public class LoginModel : PageModel
             new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
             new(ClaimTypes.Name, user.Username),
             new("FullName", user.FullName),
-            new(ClaimTypes.Role, user.Role.RoleName)
+            new(ClaimTypes.Role, user.Role.RoleName),
+            new(ActiveUserCookieEvents.CredentialVersionClaim,
+                ActiveUserCookieEvents.CredentialVersion(user.PasswordHash))
         };
 
         var principal = new ClaimsPrincipal(

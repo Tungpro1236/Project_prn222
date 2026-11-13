@@ -65,7 +65,7 @@
                             <div class="fw-semibold">@item.Animal.Client.FullName</div>
                             <div class="text-muted small">@item.Animal.Name · @item.Animal.Client.Phone</div>
                         </td>
-                        <td>@(item.Service?.Name ?? "—")</td>
+                        <td>@(item.Reason ?? "—")</td>
                         <td>
                             <div>@item.Veterinarian.FullName</div>
                             <div class="text-muted small">@AppRoles.DisplayName(item.Veterinarian.Role.RoleName)</div>

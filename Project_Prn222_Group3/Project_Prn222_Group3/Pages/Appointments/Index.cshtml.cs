@@ -36,7 +36,6 @@ public class IndexModel : PageModel
     {
         var query = _db.Appointments
             .Include(a => a.Animal).ThenInclude(a => a.Client)
-            .Include(a => a.Service)
             .Include(a => a.Veterinarian).ThenInclude(u => u.Role)
             .AsQueryable();
 
@@ -87,7 +86,6 @@ public class BookModel : PageModel
 
     public List<SelectListItem> ClientOptions { get; set; } = new();
     public List<SelectListItem> AnimalOptions { get; set; } = new();
-    public List<SelectListItem> ServiceOptions { get; set; } = new();
     public List<SelectListItem> ProviderOptions { get; set; } = new();
     public IReadOnlyList<AvailableSlot> Slots { get; set; } = [];
     public bool IsClient { get; set; }
@@ -97,7 +95,8 @@ public class BookModel : PageModel
     {
         public int? ClientID { get; set; }
         public int AnimalID { get; set; }
-        public int ServiceID { get; set; }
+        [Range(5, 480)]
+        public int DurationMinutes { get; set; } = 30;
         public int ProviderID { get; set; }
 
         [Required(ErrorMessage = "Vui lòng chọn ngày.")]
@@ -125,7 +124,7 @@ public class BookModel : PageModel
 
             Input.ClientID = appointment.Animal.ClientID;
             Input.AnimalID = appointment.AnimalID;
-            Input.ServiceID = appointment.ServiceID ?? 0;
+            Input.DurationMinutes = appointment.ExpectedDurationMinutes;
             Input.ProviderID = appointment.VeterinarianID;
             Input.Date = ClinicTime.ToVietnam(appointment.AppointmentTime).Date;
             Input.Slot = ClinicTime.ToVietnam(appointment.AppointmentTime);
@@ -156,7 +155,7 @@ public class BookModel : PageModel
         var request = new BookingRequest(
             Input.AnimalID,
             Input.ProviderID,
-            Input.ServiceID,
+            Input.DurationMinutes,
             Input.Slot!.Value,
             Input.Reason,
             userId);
@@ -176,9 +175,10 @@ public class BookModel : PageModel
         return RedirectToPage("Index");
     }
 
-    public async Task<IActionResult> OnGetSlotsAsync(int providerId, int serviceId, DateTime date, int? ignoreId)
+    public async Task<IActionResult> OnGetSlotsAsync(int providerId, int durationMinutes, DateTime date, int? ignoreId)
     {
-        var slots = await _booking.GetAvailableSlotsAsync(providerId, serviceId, date, ignoreId);
+        if (ignoreId is not null && await LoadEditableAsync(ignoreId.Value) is null) return Forbid();
+        var slots = await _booking.GetAvailableSlotsAsync(providerId, durationMinutes, date, ignoreId);
         return new JsonResult(slots.Select(s => new
         {
             value = s.LocalStart.ToString("yyyy-MM-ddTHH:mm"),
@@ -188,29 +188,13 @@ public class BookModel : PageModel
 
     public async Task<IActionResult> OnGetAnimalsAsync(int clientId)
     {
+        if (User.IsInRole(AppRoles.Client) && !await _db.Clients.AnyAsync(c => c.ClientID == clientId && c.UserID == CurrentUserId)) return Forbid();
         var animals = await _db.Animals
             .Where(a => a.ClientID == clientId && a.IsActive)
             .OrderBy(a => a.Name)
             .Select(a => new { value = a.AnimalID, text = a.Name + " (" + a.Species + ")" })
             .ToListAsync();
         return new JsonResult(animals);
-    }
-
-    public async Task<IActionResult> OnGetProvidersAsync(int serviceId)
-    {
-        var service = await _db.Services.FirstOrDefaultAsync(s => s.ServiceID == serviceId && s.IsActive);
-        if (service is null)
-        {
-            return new JsonResult(Array.Empty<object>());
-        }
-
-        var role = service.Category == ServiceCategories.Grooming ? AppRoles.PetGroomer : AppRoles.Veterinarian;
-        var providers = await _db.Users
-            .Where(u => u.IsActive && u.Role.RoleName == role)
-            .OrderBy(u => u.FullName)
-            .Select(u => new { value = u.UserID, text = u.FullName })
-            .ToListAsync();
-        return new JsonResult(providers);
     }
 
     private async Task<Appointment?> LoadEditableAsync(int id)
@@ -264,26 +248,12 @@ public class BookModel : PageModel
             }
         }
 
-        ServiceOptions = await _db.Services
-            .Where(s => s.IsActive)
-            .OrderBy(s => s.Name)
-            .Select(s => new SelectListItem(s.Name + " (" + s.DurationMinutes + " phút)", s.ServiceID.ToString()))
-            .ToListAsync();
+        ProviderOptions = await _db.Users.Where(u => u.IsActive && u.Role.RoleName == AppRoles.Veterinarian)
+            .OrderBy(u => u.FullName).Select(u => new SelectListItem(u.FullName, u.UserID.ToString())).ToListAsync();
 
-        if (Input.ServiceID > 0)
+        if (Input.ProviderID > 0 && Input.DurationMinutes > 0 && Input.Date is not null)
         {
-            var service = await _db.Services.FirstOrDefaultAsync(s => s.ServiceID == Input.ServiceID);
-            var role = service?.Category == ServiceCategories.Grooming ? AppRoles.PetGroomer : AppRoles.Veterinarian;
-            ProviderOptions = await _db.Users
-                .Where(u => u.IsActive && u.Role.RoleName == role)
-                .OrderBy(u => u.FullName)
-                .Select(u => new SelectListItem(u.FullName, u.UserID.ToString()))
-                .ToListAsync();
-        }
-
-        if (Input.ProviderID > 0 && Input.ServiceID > 0 && Input.Date is not null)
-        {
-            Slots = await _booking.GetAvailableSlotsAsync(Input.ProviderID, Input.ServiceID, Input.Date.Value, EditingId);
+            Slots = await _booking.GetAvailableSlotsAsync(Input.ProviderID, Input.DurationMinutes, Input.Date.Value, EditingId);
         }
     }
 

@@ -115,7 +115,7 @@ else
                         <tr>
                             <td>@ClinicTime.Format(appointment.AppointmentTime)</td>
                             <td class="fw-semibold">@appointment.Animal.Name</td>
-                            <td>@(appointment.Service?.Name ?? appointment.Reason ?? "—")</td>
+                            <td>@(appointment.Reason ?? "—")</td>
                             <td>@appointment.Veterinarian.FullName</td>
                             <td>
                                 <span class="badge @DisplayText.AppointmentBadge(appointment.Status)">

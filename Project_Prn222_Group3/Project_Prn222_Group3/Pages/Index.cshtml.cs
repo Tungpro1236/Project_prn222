@@ -23,7 +23,7 @@ public class IndexModel : PageModel
         CanEditRecords || User.IsInRole(AppRoles.Client);
 
     public bool CanViewAppointments =>
-        CanBook || User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.PetGroomer);
+        CanBook || User.IsInRole(AppRoles.Veterinarian);
 
     public bool IsClient => User.IsInRole(AppRoles.Client);
 
