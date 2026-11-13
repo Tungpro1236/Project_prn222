@@ -1,0 +1,173 @@
+@page
+@model Project_Prn222_Group3.Pages.Dashboard.IndexModel
+
+@{
+    ViewData["Title"] = "Tổng quan phòng khám";
+}
+
+<div class="container mt-4">
+
+    <h1 class="h3 fw-bold">Tổng quan hoạt động phòng khám</h1>
+    <p class="text-muted">
+        Số liệu toàn bộ thời gian · Ngày cảnh báo theo giờ Việt Nam (UTC+7).
+    </p>
+
+    <a asp-page="/Audit/Index" class="btn btn-outline-primary">Xem lịch sử thao tác</a>
+    <h3 class="h5 mt-4 mb-3">Thống kê hoạt động</h3>
+
+    <div class="row g-3">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Tổng lượt khám</h6>
+                    <h2 class="text-primary">
+                        @Model.TotalVisits
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Lượt khám hoàn thành</h6>
+                    <h2 class="text-success">
+                        @Model.CompletedVisits
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Lượt khám đang chờ</h6>
+                    <h2 class="text-warning">
+                        @Model.WaitingVisits
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Tổng lịch hẹn</h6>
+                    <h2 class="text-info">
+                        @Model.TotalAppointments
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <p class="mt-3">Tổng bệnh án: <strong>@Model.TotalExaminations</strong></p>
+    <h3 class="h5 mt-5 mb-3">Cảnh báo tồn kho thuốc</h3>
+
+    <div class="row g-3">
+
+        <div class="col-md-4">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Thuốc sắp hết</h6>
+                    <h2 class="text-warning">
+                        @Model.LowStockMedicines
+                    </h2>
+                    <small class="text-muted">
+                        Thuốc đang hoạt động có tổng tồn chưa hết hạn từ 0 đến 10 đơn vị
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-danger shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Lô thuốc đã hết hạn</h6>
+                    <h2 class="text-danger">
+                        @Model.ExpiredBatches
+                    </h2>
+                    <small class="text-muted">
+                        Lô thuốc hết hạn nhưng vẫn còn tồn kho
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-info shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Lô thuốc sắp hết hạn</h6>
+                    <h2 class="text-info">
+                        @Model.ExpiringSoonBatches
+                    </h2>
+                    <small class="text-muted">
+                        Lô thuốc sẽ hết hạn trong vòng 30 ngày
+                    </small>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <h3 class="h5 mt-5 mb-3">Thống kê tài chính</h3>
+
+    <div class="row g-3">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Tổng giá trị hóa đơn hợp lệ</h6>
+                    <h2 class="text-primary">
+                        @Model.TotalBillAmount.ToString("N2") VNĐ
+                    </h2>
+                    <small class="text-muted">
+                        @Model.TotalBills hóa đơn chưa hủy
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Doanh thu thực thu</h6>
+                    <h2 class="text-success">
+                        @Model.TotalCollectedAmount.ToString("N2") VNĐ
+                    </h2>
+                    <small class="text-muted">
+                        @Model.TotalPayments giao dịch hoàn tất · Không tính giao dịch vô hiệu và hóa đơn hủy
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6>Công nợ còn lại</h6>
+                    <h2 class="text-danger">
+                        @Model.OutstandingAmount.ToString("N2") VNĐ
+                    </h2>
+                    <small class="text-muted">
+                        Hóa đơn chưa hủy trừ các thanh toán hoàn tất của hóa đơn đó
+                    </small>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+<div class="mt-5"><h2 class="h5">Cảnh báo thuốc theo lô</h2><p class="text-muted">Chỉ xét lô còn tồn. Ngưỡng tồn thấp cố định là 10 đơn vị/lô; chưa phải mức đặt hàng lại theo thuốc. Hiển thị tối đa 50 lô.</p>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Thuốc</th><th>Mã lô</th><th>Hạn dùng</th><th>Tồn</th><th>Cảnh báo</th></tr></thead><tbody>
+@if (Model.MedicineAlerts.Count == 0) { <tr><td colspan="5">Không có cảnh báo thuốc.</td></tr> }
+@foreach (var item in Model.MedicineAlerts)
+{
+    <tr><td>@item.MedicineName</td><td>@item.BatchNumber</td><td>@item.ExpiryDate.ToString("dd/MM/yyyy")</td><td>@item.QuantityOnHand</td><td>@(item.AlertStatus == "Expired" ? "Hết hạn" : item.AlertStatus == "Expiring Soon" ? "Sắp hết hạn" : "Tồn thấp")</td></tr>
+}
+</tbody></table></div>
+</div>
+</div>

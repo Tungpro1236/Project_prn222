@@ -1,0 +1,48 @@
+@page
+@model Project_Prn222_Group3.Pages.Audit.IndexModel
+@{ ViewData["Title"] = "Lịch sử thao tác"; }
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-4"><h1 class="h3">Lịch sử thao tác</h1><a asp-page="/Dashboard/Index">Về thống kê</a></div>
+<form method="get" class="row g-3 mb-4">
+<div class="col-lg-4"><label for="audit-search" class="form-label">Người thao tác / bảng / mã bản ghi</label><input id="audit-search" name="Search" value="@Model.Search" class="form-control" /></div>
+<div class="col-lg-2 col-sm-6"><label for="audit-action" class="form-label">Thao tác</label><select id="audit-action" name="ActionFilter" class="form-select"><option value="">Tất cả</option>@foreach (var action in Model.Actions) { <option value="@action" selected="@(Model.ActionFilter == action)">@action</option> }</select></div>
+<div class="col-lg-2 col-sm-6"><label for="from" class="form-label">Từ ngày</label><input id="from" name="FromDate" type="date" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+<div class="col-lg-2 col-sm-6"><label for="to" class="form-label">Đến ngày</label><input id="to" name="ToDate" type="date" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+<div class="col-lg-2 col-sm-6 d-flex align-items-end gap-2"><button class="btn btn-vcms">Lọc</button><a asp-page="Index" class="btn btn-outline-secondary">Đặt lại</a></div>
+</form>
+@if (Model.ErrorMessage is not null) { <p class="alert alert-danger" role="alert">@Model.ErrorMessage</p> }
+<p>@Model.TotalRecords bản ghi phù hợp · Trang @Model.PageNumber / @Model.TotalPages · Tối đa @Model.PageSize bản ghi/trang · Giờ Việt Nam (UTC+7)</p>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Bảng / mã</th><th>Thao tác</th><th>Chi tiết</th></tr></thead><tbody>
+@if (Model.AuditLogs.Count == 0) { <tr><td colspan="5">Không có lịch sử phù hợp.</td></tr> }
+@foreach (var log in Model.AuditLogs)
+{
+    <tr>
+        <td>@ClinicTime.Format(log.OccurredAt)</td><td>@log.ActorName</td><td>@log.EntityName · @log.EntityID</td><td>@log.Action</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="collapse" data-bs-target="#audit-detail-@log.AuditLogID" aria-expanded="false" aria-controls="audit-detail-@log.AuditLogID">Xem #@log.AuditLogID</button>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="5" class="p-0 border-0">
+            <div class="collapse" id="audit-detail-@log.AuditLogID">
+              <div class="p-3 bg-light">
+                <p class="mt-2">Log trước đó:
+                    @if (log.PreviousAuditLogID is long previous) { <a asp-page="Details" asp-route-id="@previous">#@previous</a> }
+                    else { <span>Không có</span> }
+                </p>
+                <h2 class="h6">Dữ liệu trước thay đổi</h2>
+                <pre class="border rounded p-3 bg-white text-wrap" style="overflow-wrap:anywhere">@(log.OldValues ?? "Không có dữ liệu")</pre>
+                <h2 class="h6">Dữ liệu sau thay đổi</h2>
+                <pre class="border rounded p-3 bg-white text-wrap" style="overflow-wrap:anywhere">@(log.NewValues ?? "Không có dữ liệu")</pre>
+                <a asp-page="Details" asp-route-id="@log.AuditLogID">Mở trang chi tiết</a>
+              </div>
+            </div>
+        </td>
+    </tr>
+}
+</tbody></table></div>
+@if (Model.TotalPages > 0) {
+<nav aria-label="Phân trang lịch sử" class="d-flex align-items-center gap-3 mt-3">
+@if (Model.PageNumber > 1) { <a asp-route-PageNumber="@(Model.PageNumber - 1)" asp-route-Search="@Model.Search" asp-route-ActionFilter="@Model.ActionFilter" asp-route-FromDate="@Model.FromDate?.ToString("yyyy-MM-dd")" asp-route-ToDate="@Model.ToDate?.ToString("yyyy-MM-dd")">Trang trước</a> }
+<span>Trang @Model.PageNumber / @Model.TotalPages</span>
+@if (Model.PageNumber < Model.TotalPages) { <a asp-route-PageNumber="@(Model.PageNumber + 1)" asp-route-Search="@Model.Search" asp-route-ActionFilter="@Model.ActionFilter" asp-route-FromDate="@Model.FromDate?.ToString("yyyy-MM-dd")" asp-route-ToDate="@Model.ToDate?.ToString("yyyy-MM-dd")">Trang sau</a> }
+</nav> }

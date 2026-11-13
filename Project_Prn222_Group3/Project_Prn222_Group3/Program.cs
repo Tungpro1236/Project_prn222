@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args.Where(x => x != "--bootstrap-adm
 var connectionString = builder.Configuration.GetConnectionString("Vcms")
     ?? throw new InvalidOperationException("Thiếu chuỗi kết nối 'Vcms' trong appsettings.json.");
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<VcmsDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ReceptionService>();
@@ -42,7 +43,12 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-builder.Services.AddRazorPages().AddMvcOptions(options =>
+builder.Services.AddRazorPages(options =>
+    {
+        options.Conventions.AddPageRoute("/Audit/Index", "AuditLogs");
+        options.Conventions.AddPageRoute("/Audit/Index", "AuditLogs/Index");
+    })
+    .AddMvcOptions(options =>
     options.ModelBinderProviders.Insert(0, new Project_Prn222_Group3.Infrastructure.InvariantDecimalModelBinderProvider()));
 
 var app = builder.Build();

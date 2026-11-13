@@ -1,0 +1,8 @@
+@page "{id:long}"
+@model Project_Prn222_Group3.Pages.Audit.DetailsModel
+@{ ViewData["Title"] = "Chi tiết lịch sử"; }
+<a asp-page="Index">← Lịch sử thao tác</a><h1 class="h3 mt-3">Bản ghi #@Model.AuditLog!.AuditLogID</h1>
+<dl class="row"><dt class="col-sm-3">Người thao tác</dt><dd class="col-sm-9">@Model.ActorName</dd><dt class="col-sm-3">Bảng / mã bản ghi</dt><dd class="col-sm-9">@Model.AuditLog.EntityName · @Model.AuditLog.EntityID</dd><dt class="col-sm-3">Thao tác</dt><dd class="col-sm-9">@Model.AuditLog.Action</dd><dt class="col-sm-3">Giờ Việt Nam</dt><dd class="col-sm-9">@ClinicTime.Format(Model.AuditLog.OccurredAt)</dd></dl>
+<p>Log trước đó: @if (Model.AuditLog.PreviousAuditLogID is long previous) { <a asp-page="Details" asp-route-id="@previous">#@previous</a> } else { <span>Không có</span> }</p>
+<h2 class="h5">Nội dung trước</h2><pre class="text-wrap border rounded p-3 bg-white">@(Model.AuditLog.OldValues ?? "Không có")</pre>
+<h2 class="h5">Nội dung sau</h2><pre class="text-wrap border rounded p-3 bg-white">@(Model.AuditLog.NewValues ?? "Không có")</pre>

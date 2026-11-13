@@ -15,6 +15,11 @@
 <div class="row g-3">
     @if (Model.CanManageAccounts)
     {
+        <div class="col-md-6 col-xl-4"><a asp-page="/Dashboard/Index" class="dashboard-card"><h2 class="h5">Thống kê vận hành</h2><p class="text-muted mb-0">Lượt khám, doanh thu và cảnh báo thuốc theo lô.</p></a></div>
+        <div class="col-md-6 col-xl-4"><a asp-page="/Audit/Index" class="dashboard-card"><h2 class="h5">Lịch sử thao tác</h2><p class="text-muted mb-0">Tra cứu người thao tác, bản ghi và các thay đổi.</p></a></div>
+    }
+    @if (Model.CanManageAccounts)
+    {
         <div class="col-md-6 col-xl-4">
             <a asp-page="/Staff/Index" class="dashboard-card">
                 <div class="dashboard-icon">TK</div>

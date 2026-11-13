@@ -26,6 +26,8 @@ public abstract class ModuleService(VcmsDbContext db)
     // SQL application locks serialize module writes across processes, avoiding lock upgrade races.
     protected async Task<OperationResult> ExecuteAsync(string resource, int actorId, string[] roles, Func<User, Task<OperationResult>> action)
     {
+        using var auditScope = resource == "VCMS:Care" ? Db.SuppressAutomaticAudit() : null;
+        Db.AuditActorUserId = actorId;
         await using var tx = await Db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {

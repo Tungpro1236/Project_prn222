@@ -35,6 +35,8 @@
                         }
                         @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.ClinicManager))
                         {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Dashboard/Index">Thống kê</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Audit/Index">Lịch sử</a></li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-page="/Staff/Index">Tài khoản nhân viên</a>
                             </li>
