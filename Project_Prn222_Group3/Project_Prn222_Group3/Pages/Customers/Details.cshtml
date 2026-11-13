@@ -83,7 +83,7 @@
                     <tr>
                         <td>@ClinicTime.Format(item.AppointmentTime)</td>
                         <td>@item.Animal.Name</td>
-                        <td>@(item.Service?.Name ?? "—")</td>
+                        <td>@(item.Reason ?? "—")</td>
                         <td>@item.Veterinarian.FullName</td>
                         <td><span class="badge @DisplayText.AppointmentBadge(item.Status)">@DisplayText.AppointmentStatus(item.Status)</span></td>
                     </tr>

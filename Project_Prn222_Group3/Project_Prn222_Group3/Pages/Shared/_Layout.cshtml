@@ -15,7 +15,7 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-lg navbar-vcms shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-vcms shadow-sm">
             <div class="container">
                 <a class="navbar-brand fw-bold" asp-page="/Index">
                     VCMS <span class="brand-sub d-none d-md-inline">Veterinary Clinic</span>
@@ -37,15 +37,6 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-page="/Staff/Index">Tài khoản nhân viên</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Clinic/Settings">Phòng khám</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Clinic/Services">Dịch vụ</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Clinic/Schedules">Lịch làm</a>
-                            </li>
                         }
                         @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist) || User.IsInRole(AppRoles.ClinicManager))
                         {
@@ -54,7 +45,7 @@
                             </li>
                         }
                         @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Receptionist) || User.IsInRole(AppRoles.ClinicManager)
-                            || User.IsInRole(AppRoles.Client) || User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.PetGroomer))
+                            || User.IsInRole(AppRoles.Client) || User.IsInRole(AppRoles.Veterinarian))
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-page="/Appointments/Index">Lịch hẹn</a>
@@ -68,6 +59,14 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-page="/Reception/Queue">Hàng đợi</a>
                             </li>
+                        }
+                        @if (User.IsInRole(AppRoles.Veterinarian) || User.IsInRole(AppRoles.Admin))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Examination/Index">Khám bệnh</a></li>
+                        }
+                        @if (User.IsInRole(AppRoles.DispensingStaff) || User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.ClinicManager))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Pharmacy/Index">Nhà thuốc</a></li>
                         }
                         @if (User.IsInRole(AppRoles.Client))
                         {

@@ -1,0 +1,38 @@
+@page "{visitId:int}"
+@model Project_Prn222_Group3.Pages.Examination.EditModel
+@{ ViewData["Title"] = "Bệnh án"; }
+<a asp-page="Index">← Danh sách lượt khám</a>
+<h1 class="h3 mt-3">Bệnh án · @Model.VisitRecord.Appointment.Animal.Name</h1>
+<p>@Model.VisitRecord.Appointment.Animal.Client.FullName · Lượt #@Model.VisitRecord.VisitID · @(Model.VisitRecord.Encounter is null ? "Chưa ghi" : CareText.Status(Model.VisitRecord.Encounter.Status))</p>
+<form method="post" class="mb-4">
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    <fieldset disabled="@(!Model.CanWrite)">
+        <div class="mb-3"><label asp-for="Input.Symptoms" class="form-label">Triệu chứng</label><textarea asp-for="Input.Symptoms" class="form-control" rows="3"></textarea></div>
+        <div class="mb-3"><label asp-for="Input.ExaminationNotes" class="form-label">Kết quả khám</label><textarea asp-for="Input.ExaminationNotes" class="form-control" rows="4"></textarea></div>
+        <div class="mb-3"><label asp-for="Input.Diagnosis" class="form-label">Chẩn đoán</label><textarea asp-for="Input.Diagnosis" class="form-control" rows="3"></textarea></div>
+        @if (Model.IsFinal)
+        {
+            <div class="mb-3"><label asp-for="Input.CorrectionReason" class="form-label">Lý do hiệu chỉnh</label><input asp-for="Input.CorrectionReason" class="form-control" required maxlength="500" /><p class="form-text">Nội dung trước hiệu chỉnh được giữ trong lịch sử bệnh án.</p></div>
+            <button type="submit" class="btn btn-vcms">Lưu hiệu chỉnh</button>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-outline-primary">Lưu nháp</button>
+            <button type="submit" name="finalize" value="true" class="btn btn-vcms">Chốt bệnh án</button>
+        }
+    </fieldset>
+</form>
+@if (Model.VisitRecord.Encounter is not null)
+{
+    <section class="border-top pt-4 mb-4"><h2 class="h5">Đơn thuốc</h2>
+    @foreach (var rx in Model.Prescriptions) { <p><a asp-page="Prescription" asp-route-id="@rx.PrescriptionID">Đơn #@rx.PrescriptionID</a> · @CareText.Status(rx.Status)</p> }
+    @if (Model.CanWrite) { <form method="post" asp-page-handler="Prescription"><button class="btn btn-outline-primary">Mở / tạo đơn thuốc</button></form> }
+    </section>
+}
+<section class="border-top pt-4"><h2 class="h5">Lịch sử bệnh án</h2>
+@foreach (var log in Model.History)
+{
+    <details class="mb-2"><summary>@ClinicTime.Format(log.OccurredAt) · @CareText.Action(log.Action) · Tài khoản #@log.ActorUserID</summary>
+    <p class="mt-2 mb-1">Nội dung trước</p><pre class="text-wrap">@log.OldValues</pre><p class="mb-1">Nội dung sau</p><pre class="text-wrap">@log.NewValues</pre></details>
+}
+</section>

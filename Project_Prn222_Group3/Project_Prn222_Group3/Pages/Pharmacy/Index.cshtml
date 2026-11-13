@@ -1,0 +1,17 @@
+@page
+@model Project_Prn222_Group3.Pages.Pharmacy.IndexModel
+@{ ViewData["Title"] = "Nhà thuốc"; }
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-4"><div><h1 class="h3">Nhà thuốc</h1><p class="text-muted mb-0">Quản lý thuốc, tồn theo lô và cấp theo đơn đã chốt.</p></div><div><a asp-page="Medicine" class="btn btn-vcms">Thêm thuốc</a> <a asp-page="Stock" class="btn btn-outline-primary">Nhập / điều chỉnh kho</a></div></div>
+<h2 class="h5">Danh mục thuốc</h2>
+<div class="table-responsive mb-4"><table class="table align-middle"><thead><tr><th>Thuốc</th><th>Đơn vị</th><th>Giá hiện tại</th><th>Tồn còn hạn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+@if (Model.Medicines.Count == 0) { <tr><td colspan="6">Chưa có thuốc. Chọn “Thêm thuốc” để tạo danh mục.</td></tr> }
+@foreach (var med in Model.Medicines)
+{
+    <tr><td>@med.MedicineName</td><td>@med.Unit</td><td>@med.CurrentPrice.ToString("N2") ₫</td><td>@med.Batches.Where(x => x.ExpiryDate.Date >= ClinicTime.VnToday).Sum(x => (long)x.QuantityOnHand)</td><td>@(med.IsActive ? "Đang dùng" : "Đã ngừng")</td><td><a asp-page="Medicine" asp-route-id="@med.MedicineID">Sửa thuốc</a></td></tr>
+}
+</tbody></table></div>
+<section class="border-top pt-4"><h2 class="h5">Đơn đã chốt gần nhất</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Đơn</th><th>Thú cưng</th><th>Ngày chốt</th><th>Thao tác</th></tr></thead><tbody>
+@if (Model.Prescriptions.Count == 0) { <tr><td colspan="4">Chưa có đơn đã chốt để cấp thuốc.</td></tr> }
+@foreach (var rx in Model.Prescriptions) { <tr><td>#@rx.PrescriptionID</td><td>@rx.Encounter.Visit.Appointment.Animal.Name</td><td>@(rx.FinalizedAt is null ? "—" : ClinicTime.Format(rx.FinalizedAt.Value))</td><td><a asp-page="Dispense" asp-route-id="@rx.PrescriptionID">Cấp thuốc / xem lịch sử</a></td></tr> }
+</tbody></table></div></section>

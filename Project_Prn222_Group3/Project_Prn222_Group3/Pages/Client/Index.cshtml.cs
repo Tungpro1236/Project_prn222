@@ -39,7 +39,6 @@ public class IndexModel : PageModel
         Appointments = await _db.Appointments
             .AsNoTracking()
             .Include(a => a.Animal)
-            .Include(a => a.Service)
             .Include(a => a.Veterinarian)
             .Where(a => a.Animal.ClientID == ClientRecord.ClientID)
             .OrderByDescending(a => a.AppointmentTime)

@@ -6,7 +6,8 @@ using Project_Prn222_Group3.Data;
 using Project_Prn222_Group3.Models;
 using Project_Prn222_Group3.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var bootstrapAdmin = args.Contains("--bootstrap-admin");
+var builder = WebApplication.CreateBuilder(args.Where(x => x != "--bootstrap-admin").ToArray());
 
 var connectionString = builder.Configuration.GetConnectionString("Vcms")
     ?? throw new InvalidOperationException("Thiếu chuỗi kết nối 'Vcms' trong appsettings.json.");
@@ -15,6 +16,8 @@ builder.Services.AddDbContext<VcmsDbContext>(options => options.UseSqlServer(con
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ReceptionService>();
 builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<ExaminationService>();
+builder.Services.AddScoped<PharmacyService>();
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -37,11 +40,17 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddMvcOptions(options =>
+    options.ModelBinderProviders.Insert(0, new Project_Prn222_Group3.Infrastructure.InvariantDecimalModelBinderProvider()));
 
 var app = builder.Build();
 
 await DbSeeder.SeedAsync(app.Services);
+if (bootstrapAdmin)
+{
+    await DbSeeder.BootstrapAdminAsync(app.Services);
+    return;
+}
 
 if (!app.Environment.IsDevelopment())
 {

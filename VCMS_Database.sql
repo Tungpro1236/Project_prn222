@@ -1,252 +1,427 @@
 /*
-    VCMS schema for the features implemented so far:
-    staff accounts, reception check-in/queue, clinic configuration,
-    customer and pet records, and availability booking.
-
-    Safe to run more than once. It creates VeterinaryClinicDB when missing
-    and adds only the columns/tables that are not already present.
+ VCMS - Veterinary Clinic Management System
+ PRN222 | SQL Server 2022 | Initial schema v1.0
+ Proposed implementation based on Report 1 and team module plan.
+ Synthetic/demo data only. Review operational policies before production use.
+ Run in SSMS against a SQL Server instance with CREATE DATABASE permission.
 */
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-SET ANSI_PADDING ON;
-SET ANSI_WARNINGS ON;
-SET CONCAT_NULL_YIELDS_NULL ON;
-SET ARITHABORT ON;
-SET NUMERIC_ROUNDABORT OFF;
-GO
 IF DB_ID(N'VeterinaryClinicDB') IS NULL
-BEGIN
     CREATE DATABASE VeterinaryClinicDB;
-END
 GO
-
 USE VeterinaryClinicDB;
 GO
 
-IF OBJECT_ID(N'dbo.Roles', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Roles
-    (
-        RoleID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Roles PRIMARY KEY,
-        RoleName nvarchar(40) NOT NULL,
-        Description nvarchar(200) NULL
-    );
-END
+/* 01 - Identity */
+CREATE TABLE dbo.Roles (
+ RoleID INT IDENTITY(1,1) PRIMARY KEY,
+ RoleName VARCHAR(40) NOT NULL UNIQUE,
+ Description NVARCHAR(200) NULL
+);
+GO
+CREATE TABLE dbo.Users (
+ UserID INT IDENTITY(1,1) PRIMARY KEY,
+ RoleID INT NOT NULL,
+ Username VARCHAR(80) NOT NULL UNIQUE,
+ PasswordHash NVARCHAR(255) NOT NULL,
+ FullName NVARCHAR(120) NOT NULL,
+ Email VARCHAR(150) NULL,
+ Phone VARCHAR(20) NULL,
+ IsActive BIT NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT (1),
+ CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleID) REFERENCES dbo.Roles(RoleID)
+);
+GO
+CREATE UNIQUE INDEX UX_Users_Email ON dbo.Users(Email) WHERE Email IS NOT NULL;
 GO
 
-IF OBJECT_ID(N'dbo.Users', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Users
-    (
-        UserID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Users PRIMARY KEY,
-        RoleID int NOT NULL,
-        Username nvarchar(80) NOT NULL,
-        PasswordHash nvarchar(255) NOT NULL,
-        FullName nvarchar(120) NOT NULL,
-        Email nvarchar(150) NULL,
-        Phone nvarchar(20) NULL,
-        IsActive bit NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT (1),
-        CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT (SYSUTCDATETIME()),
-        CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleID) REFERENCES dbo.Roles(RoleID)
-    );
-END
+/* 02 - Owner, animal, booking */
+CREATE TABLE dbo.Clients (
+ ClientID INT IDENTITY(1,1) PRIMARY KEY,
+ UserID INT NULL UNIQUE,
+ FullName NVARCHAR(120) NOT NULL,
+ Phone VARCHAR(20) NOT NULL,
+ Email VARCHAR(150) NULL,
+ Address NVARCHAR(255) NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_Clients_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID)
+);
+GO
+CREATE TABLE dbo.Animals (
+ AnimalID INT IDENTITY(1,1) PRIMARY KEY,
+ ClientID INT NOT NULL,
+ Name NVARCHAR(100) NOT NULL,
+ Species NVARCHAR(60) NOT NULL,
+ Breed NVARCHAR(100) NULL,
+ Gender VARCHAR(10) NOT NULL DEFAULT 'Unknown',
+ DateOfBirth DATE NULL,
+ WeightKg DECIMAL(7,2) NULL,
+ Notes NVARCHAR(500) NULL,
+ IsActive BIT NOT NULL DEFAULT (1),
+ CONSTRAINT FK_Animals_Clients FOREIGN KEY (ClientID) REFERENCES dbo.Clients(ClientID),
+ CONSTRAINT CK_Animals_Gender CHECK (Gender IN ('Male','Female','Unknown')),
+ CONSTRAINT CK_Animals_Weight CHECK (WeightKg IS NULL OR WeightKg > 0)
+);
+GO
+CREATE TABLE dbo.Appointments (
+ AppointmentID INT IDENTITY(1,1) PRIMARY KEY,
+ AnimalID INT NOT NULL,
+ VeterinarianID INT NOT NULL,
+ AppointmentTime DATETIME2(0) NOT NULL,
+ ExpectedDurationMinutes INT NOT NULL DEFAULT (30),
+ Reason NVARCHAR(500) NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+ CreatedByUserID INT NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CancelledAt DATETIME2(0) NULL,
+ CONSTRAINT FK_Appointments_Animals FOREIGN KEY (AnimalID) REFERENCES dbo.Animals(AnimalID),
+ CONSTRAINT FK_Appointments_Vet FOREIGN KEY (VeterinarianID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT FK_Appointments_Creator FOREIGN KEY (CreatedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_Appointments_Status CHECK (Status IN ('Pending','Confirmed','CheckedIn','Completed','Cancelled','NoShow')),
+ CONSTRAINT CK_Appointments_Duration CHECK (ExpectedDurationMinutes BETWEEN 5 AND 480)
+);
+GO
+/* Prevent identical confirmed slots; overlapping intervals require application-side transactional validation. */
+CREATE UNIQUE INDEX UX_Appointments_Vet_ConfirmedTime
+ ON dbo.Appointments(VeterinarianID, AppointmentTime)
+ WHERE Status IN ('Confirmed','CheckedIn');
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Users_Username' AND object_id = OBJECT_ID(N'dbo.Users'))
-    CREATE UNIQUE INDEX IX_Users_Username ON dbo.Users(Username);
+/* 03 - Reception and queue */
+CREATE TABLE dbo.Visits (
+ VisitID INT IDENTITY(1,1) PRIMARY KEY,
+ AppointmentID INT NOT NULL UNIQUE,
+ CheckInAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ ReceptionistID INT NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Waiting',
+ CompletedAt DATETIME2(0) NULL,
+ CONSTRAINT FK_Visits_Appointment FOREIGN KEY (AppointmentID) REFERENCES dbo.Appointments(AppointmentID),
+ CONSTRAINT FK_Visits_Receptionist FOREIGN KEY (ReceptionistID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_Visits_Status CHECK (Status IN ('Waiting','InProgress','Completed','Cancelled'))
+);
+GO
+CREATE TABLE dbo.QueueEntries (
+ QueueEntryID INT IDENTITY(1,1) PRIMARY KEY,
+ VisitID INT NOT NULL UNIQUE,
+ QueueDate DATE NOT NULL,
+ QueueNumber INT NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Waiting',
+ CalledAt DATETIME2(0) NULL,
+ CONSTRAINT FK_QueueEntries_Visits FOREIGN KEY (VisitID) REFERENCES dbo.Visits(VisitID),
+ CONSTRAINT UQ_QueueEntries_DateNumber UNIQUE (QueueDate, QueueNumber),
+ CONSTRAINT CK_QueueEntries_Number CHECK (QueueNumber > 0),
+ CONSTRAINT CK_QueueEntries_Status CHECK (Status IN ('Waiting','Called','Serving','Done','Skipped'))
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Users_Email' AND object_id = OBJECT_ID(N'dbo.Users'))
-    CREATE UNIQUE INDEX IX_Users_Email ON dbo.Users(Email) WHERE Email IS NOT NULL;
+/* 04 - Clinical encounter and prescriptions */
+CREATE TABLE dbo.Encounters (
+ EncounterID INT IDENTITY(1,1) PRIMARY KEY,
+ VisitID INT NOT NULL UNIQUE,
+ VeterinarianID INT NOT NULL,
+ Symptoms NVARCHAR(MAX) NULL,
+ ExaminationNotes NVARCHAR(MAX) NULL,
+ Diagnosis NVARCHAR(MAX) NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+ ExaminedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ FinalizedAt DATETIME2(0) NULL,
+ CONSTRAINT FK_Encounters_Visits FOREIGN KEY (VisitID) REFERENCES dbo.Visits(VisitID),
+ CONSTRAINT FK_Encounters_Vet FOREIGN KEY (VeterinarianID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_Encounters_Status CHECK (Status IN ('Draft','Finalized','Corrected'))
+);
+GO
+CREATE TABLE dbo.Prescriptions (
+ PrescriptionID INT IDENTITY(1,1) PRIMARY KEY,
+ EncounterID INT NOT NULL,
+ PrescribedByUserID INT NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+ Instructions NVARCHAR(1000) NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ FinalizedAt DATETIME2(0) NULL,
+ CONSTRAINT FK_Prescriptions_Encounters FOREIGN KEY (EncounterID) REFERENCES dbo.Encounters(EncounterID),
+ CONSTRAINT FK_Prescriptions_User FOREIGN KEY (PrescribedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_Prescriptions_Status CHECK (Status IN ('Draft','Finalized','Cancelled'))
+);
 GO
 
-IF OBJECT_ID(N'dbo.Clients', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Clients
-    (
-        ClientID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Clients PRIMARY KEY,
-        UserID int NULL,
-        FullName nvarchar(120) NOT NULL,
-        Phone nvarchar(20) NOT NULL,
-        Email nvarchar(150) NULL,
-        Address nvarchar(255) NULL,
-        CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_Clients_CreatedAt DEFAULT (SYSUTCDATETIME()),
-        CONSTRAINT FK_Clients_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID)
-    );
-END
+/* 05 - Service catalogue, schedules, orders, results */
+CREATE TABLE dbo.Services (
+ ServiceID INT IDENTITY(1,1) PRIMARY KEY,
+ ServiceName NVARCHAR(150) NOT NULL UNIQUE,
+ Description NVARCHAR(500) NULL,
+ CurrentPrice DECIMAL(18,2) NOT NULL,
+ IsActive BIT NOT NULL DEFAULT (1),
+ CONSTRAINT CK_Services_Price CHECK (CurrentPrice >= 0)
+);
+GO
+CREATE TABLE dbo.VeterinarianSchedules (
+ ScheduleID INT IDENTITY(1,1) PRIMARY KEY,
+ VeterinarianID INT NOT NULL,
+ StartAt DATETIME2(0) NOT NULL,
+ EndAt DATETIME2(0) NOT NULL,
+ IsAvailable BIT NOT NULL DEFAULT (1),
+ Notes NVARCHAR(255) NULL,
+ CONSTRAINT FK_VetSchedules_Users FOREIGN KEY (VeterinarianID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_VetSchedules_Time CHECK (EndAt > StartAt)
+);
+GO
+CREATE TABLE dbo.ServiceOrders (
+ ServiceOrderID INT IDENTITY(1,1) PRIMARY KEY,
+ EncounterID INT NOT NULL,
+ ServiceID INT NOT NULL,
+ OrderedByUserID INT NOT NULL,
+ Quantity INT NOT NULL DEFAULT (1),
+ UnitPrice DECIMAL(18,2) NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Ordered',
+ OrderedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CancelledAt DATETIME2(0) NULL,
+ CONSTRAINT FK_ServiceOrders_Encounter FOREIGN KEY (EncounterID) REFERENCES dbo.Encounters(EncounterID),
+ CONSTRAINT FK_ServiceOrders_Service FOREIGN KEY (ServiceID) REFERENCES dbo.Services(ServiceID),
+ CONSTRAINT FK_ServiceOrders_User FOREIGN KEY (OrderedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_ServiceOrders_Quantity CHECK (Quantity > 0),
+ CONSTRAINT CK_ServiceOrders_Price CHECK (UnitPrice >= 0),
+ CONSTRAINT CK_ServiceOrders_Status CHECK (Status IN ('Ordered','InProgress','Completed','Cancelled'))
+);
+GO
+CREATE TABLE dbo.ServiceResults (
+ ServiceResultID INT IDENTITY(1,1) PRIMARY KEY,
+ ServiceOrderID INT NOT NULL UNIQUE,
+ ResultText NVARCHAR(MAX) NOT NULL,
+ RecordedByUserID INT NOT NULL,
+ RecordedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_ServiceResults_Order FOREIGN KEY (ServiceOrderID) REFERENCES dbo.ServiceOrders(ServiceOrderID),
+ CONSTRAINT FK_ServiceResults_User FOREIGN KEY (RecordedByUserID) REFERENCES dbo.Users(UserID)
+);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Clients_UserID' AND object_id = OBJECT_ID(N'dbo.Clients'))
-    CREATE UNIQUE INDEX IX_Clients_UserID ON dbo.Clients(UserID) WHERE UserID IS NOT NULL;
+/* 06 - Pharmacy and batches */
+CREATE TABLE dbo.Medicines (
+ MedicineID INT IDENTITY(1,1) PRIMARY KEY,
+ MedicineName NVARCHAR(150) NOT NULL,
+ Unit NVARCHAR(30) NOT NULL,
+ CurrentPrice DECIMAL(18,2) NOT NULL DEFAULT (0),
+ IsActive BIT NOT NULL DEFAULT (1),
+ CONSTRAINT CK_Medicines_Price CHECK (CurrentPrice >= 0)
+);
+GO
+CREATE TABLE dbo.MedicineBatches (
+ BatchID INT IDENTITY(1,1) PRIMARY KEY,
+ MedicineID INT NOT NULL,
+ BatchNumber VARCHAR(80) NOT NULL,
+ ExpiryDate DATE NOT NULL,
+ ReceivedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ QuantityOnHand INT NOT NULL DEFAULT (0),
+ PurchaseUnitCost DECIMAL(18,2) NULL,
+ CONSTRAINT FK_Batches_Medicine FOREIGN KEY (MedicineID) REFERENCES dbo.Medicines(MedicineID),
+ CONSTRAINT UQ_Batches_MedicineNumber UNIQUE (MedicineID, BatchNumber),
+ CONSTRAINT CK_Batches_Quantity CHECK (QuantityOnHand >= 0),
+ CONSTRAINT CK_Batches_Cost CHECK (PurchaseUnitCost IS NULL OR PurchaseUnitCost >= 0)
+);
+GO
+CREATE TABLE dbo.PrescriptionItems (
+ PrescriptionItemID INT IDENTITY(1,1) PRIMARY KEY,
+ PrescriptionID INT NOT NULL,
+ MedicineID INT NOT NULL,
+ Quantity INT NOT NULL,
+ Dosage NVARCHAR(200) NOT NULL,
+ Frequency NVARCHAR(200) NULL,
+ DurationDays INT NULL,
+ Instructions NVARCHAR(500) NULL,
+ CONSTRAINT FK_PrescriptionItems_Prescription FOREIGN KEY (PrescriptionID) REFERENCES dbo.Prescriptions(PrescriptionID),
+ CONSTRAINT FK_PrescriptionItems_Medicine FOREIGN KEY (MedicineID) REFERENCES dbo.Medicines(MedicineID),
+ CONSTRAINT CK_PrescriptionItems_Quantity CHECK (Quantity > 0),
+ CONSTRAINT CK_PrescriptionItems_Duration CHECK (DurationDays IS NULL OR DurationDays > 0)
+);
+GO
+CREATE TABLE dbo.Dispensations (
+ DispensationID INT IDENTITY(1,1) PRIMARY KEY,
+ PrescriptionID INT NOT NULL,
+ DispensedByUserID INT NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+ DispensedAt DATETIME2(0) NULL,
+ RequestKey UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+ CONSTRAINT FK_Dispensations_Prescription FOREIGN KEY (PrescriptionID) REFERENCES dbo.Prescriptions(PrescriptionID),
+ CONSTRAINT FK_Dispensations_User FOREIGN KEY (DispensedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT UQ_Dispensations_RequestKey UNIQUE (RequestKey),
+ CONSTRAINT CK_Dispensations_Status CHECK (Status IN ('Draft','Completed','Cancelled'))
+);
+GO
+CREATE TABLE dbo.DispensationItems (
+ DispensationItemID INT IDENTITY(1,1) PRIMARY KEY,
+ DispensationID INT NOT NULL,
+ PrescriptionItemID INT NOT NULL,
+ BatchID INT NOT NULL,
+ Quantity INT NOT NULL,
+ UnitPrice DECIMAL(18,2) NOT NULL,
+ CONSTRAINT FK_DispItems_Dispensation FOREIGN KEY (DispensationID) REFERENCES dbo.Dispensations(DispensationID),
+ CONSTRAINT FK_DispItems_PrescriptionItem FOREIGN KEY (PrescriptionItemID) REFERENCES dbo.PrescriptionItems(PrescriptionItemID),
+ CONSTRAINT FK_DispItems_Batch FOREIGN KEY (BatchID) REFERENCES dbo.MedicineBatches(BatchID),
+ CONSTRAINT UQ_DispItems_LineBatch UNIQUE (DispensationID, PrescriptionItemID, BatchID),
+ CONSTRAINT CK_DispItems_Quantity CHECK (Quantity > 0),
+ CONSTRAINT CK_DispItems_Price CHECK (UnitPrice >= 0)
+);
+GO
+CREATE TABLE dbo.StockMovements (
+ StockMovementID INT IDENTITY(1,1) PRIMARY KEY,
+ BatchID INT NOT NULL,
+ DispensationItemID INT NULL,
+ MovementType VARCHAR(20) NOT NULL,
+ QuantityChange INT NOT NULL,
+ Reason NVARCHAR(500) NULL,
+ PerformedByUserID INT NOT NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_StockMovements_Batch FOREIGN KEY (BatchID) REFERENCES dbo.MedicineBatches(BatchID),
+ CONSTRAINT FK_StockMovements_DispItem FOREIGN KEY (DispensationItemID) REFERENCES dbo.DispensationItems(DispensationItemID),
+ CONSTRAINT FK_StockMovements_User FOREIGN KEY (PerformedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_StockMovements_Type CHECK (MovementType IN ('Receipt','Dispense','Adjustment','Return')),
+ CONSTRAINT CK_StockMovements_Quantity CHECK (QuantityChange <> 0),
+ CONSTRAINT CK_StockMovements_Sign CHECK ((MovementType = 'Receipt' AND QuantityChange > 0) OR (MovementType = 'Dispense' AND QuantityChange < 0) OR MovementType IN ('Adjustment','Return'))
+);
+GO
+CREATE UNIQUE INDEX UX_StockMovements_DispenseOnce ON dbo.StockMovements(DispensationItemID)
+ WHERE DispensationItemID IS NOT NULL AND MovementType = 'Dispense';
 GO
 
-IF OBJECT_ID(N'dbo.Animals', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Animals
-    (
-        AnimalID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Animals PRIMARY KEY,
-        ClientID int NOT NULL,
-        Name nvarchar(100) NOT NULL,
-        Species nvarchar(60) NOT NULL,
-        Breed nvarchar(100) NULL,
-        Gender nvarchar(10) NOT NULL CONSTRAINT DF_Animals_Gender DEFAULT (N'Unknown'),
-        DateOfBirth date NULL,
-        WeightKg decimal(7,2) NULL,
-        Notes nvarchar(500) NULL,
-        IsActive bit NOT NULL CONSTRAINT DF_Animals_IsActive DEFAULT (1),
-        CONSTRAINT FK_Animals_Clients FOREIGN KEY (ClientID) REFERENCES dbo.Clients(ClientID)
-    );
-END
+/* 07 - Billing */
+CREATE TABLE dbo.Bills (
+ BillID INT IDENTITY(1,1) PRIMARY KEY,
+ EncounterID INT NOT NULL UNIQUE,
+ TotalAmount DECIMAL(18,2) NOT NULL DEFAULT (0),
+ Status VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
+ CreatedByUserID INT NOT NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_Bills_Encounter FOREIGN KEY (EncounterID) REFERENCES dbo.Encounters(EncounterID),
+ CONSTRAINT FK_Bills_User FOREIGN KEY (CreatedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT CK_Bills_Total CHECK (TotalAmount >= 0),
+ CONSTRAINT CK_Bills_Status CHECK (Status IN ('Unpaid','Partial','Paid','Cancelled'))
+);
+GO
+CREATE TABLE dbo.BillItems (
+ BillItemID INT IDENTITY(1,1) PRIMARY KEY,
+ BillID INT NOT NULL,
+ ServiceOrderID INT NULL,
+ DispensationItemID INT NULL,
+ Description NVARCHAR(255) NOT NULL,
+ Quantity INT NOT NULL,
+ UnitPrice DECIMAL(18,2) NOT NULL,
+ LineTotal AS (CONVERT(DECIMAL(18,2), Quantity * UnitPrice)) PERSISTED,
+ CONSTRAINT FK_BillItems_Bill FOREIGN KEY (BillID) REFERENCES dbo.Bills(BillID),
+ CONSTRAINT FK_BillItems_ServiceOrder FOREIGN KEY (ServiceOrderID) REFERENCES dbo.ServiceOrders(ServiceOrderID),
+ CONSTRAINT FK_BillItems_DispItem FOREIGN KEY (DispensationItemID) REFERENCES dbo.DispensationItems(DispensationItemID),
+ CONSTRAINT CK_BillItems_Source CHECK ((CASE WHEN ServiceOrderID IS NULL THEN 0 ELSE 1 END) + (CASE WHEN DispensationItemID IS NULL THEN 0 ELSE 1 END) = 1),
+ CONSTRAINT CK_BillItems_Quantity CHECK (Quantity > 0),
+ CONSTRAINT CK_BillItems_Price CHECK (UnitPrice >= 0)
+);
+GO
+CREATE UNIQUE INDEX UX_BillItems_ServiceOrder ON dbo.BillItems(ServiceOrderID) WHERE ServiceOrderID IS NOT NULL;
+CREATE UNIQUE INDEX UX_BillItems_DispItem ON dbo.BillItems(DispensationItemID) WHERE DispensationItemID IS NOT NULL;
+GO
+CREATE TABLE dbo.Payments (
+ PaymentID INT IDENTITY(1,1) PRIMARY KEY,
+ BillID INT NOT NULL,
+ Amount DECIMAL(18,2) NOT NULL,
+ PaymentMethod VARCHAR(20) NOT NULL DEFAULT 'Cash',
+ Status VARCHAR(20) NOT NULL DEFAULT 'Completed',
+ CollectedByUserID INT NOT NULL,
+ PaidAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ RequestKey UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+ CONSTRAINT FK_Payments_Bill FOREIGN KEY (BillID) REFERENCES dbo.Bills(BillID),
+ CONSTRAINT FK_Payments_User FOREIGN KEY (CollectedByUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT UQ_Payments_RequestKey UNIQUE (RequestKey),
+ CONSTRAINT CK_Payments_Amount CHECK (Amount > 0),
+ CONSTRAINT CK_Payments_Method CHECK (PaymentMethod = 'Cash'),
+ CONSTRAINT CK_Payments_Status CHECK (Status IN ('Completed','Voided'))
+);
 GO
 
-IF OBJECT_ID(N'dbo.Appointments', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Appointments
-    (
-        AppointmentID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Appointments PRIMARY KEY,
-        AnimalID int NOT NULL,
-        ClientID int NULL,
-        ServiceID int NULL,
-        VeterinarianID int NOT NULL,
-        AppointmentTime datetime2(0) NOT NULL,
-        ExpectedDurationMinutes int NOT NULL CONSTRAINT DF_Appointments_Duration DEFAULT (30),
-        Reason nvarchar(500) NULL,
-        Status nvarchar(20) NOT NULL,
-        CreatedByUserID int NULL,
-        CreatedAt datetime2(0) NOT NULL CONSTRAINT DF_Appointments_CreatedAt DEFAULT (SYSUTCDATETIME()),
-        CancelledAt datetime2(0) NULL,
-        CONSTRAINT FK_Appointments_Animals FOREIGN KEY (AnimalID) REFERENCES dbo.Animals(AnimalID),
-        CONSTRAINT FK_Appointments_Veterinarians FOREIGN KEY (VeterinarianID) REFERENCES dbo.Users(UserID),
-        CONSTRAINT FK_Appointments_CreatedBy FOREIGN KEY (CreatedByUserID) REFERENCES dbo.Users(UserID)
-    );
-END
+/* 08 - Reminders, audit */
+CREATE TABLE dbo.Reminders (
+ ReminderID INT IDENTITY(1,1) PRIMARY KEY,
+ AppointmentID INT NOT NULL,
+ ReminderType VARCHAR(30) NOT NULL,
+ DueAt DATETIME2(0) NOT NULL,
+ Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+ ProcessedAt DATETIME2(0) NULL,
+ Outcome NVARCHAR(500) NULL,
+ CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_Reminders_Appointment FOREIGN KEY (AppointmentID) REFERENCES dbo.Appointments(AppointmentID),
+ CONSTRAINT UQ_Reminders_AppointmentTypeDue UNIQUE (AppointmentID, ReminderType, DueAt),
+ CONSTRAINT CK_Reminders_Type CHECK (ReminderType IN ('Appointment','FollowUp','Overdue')),
+ CONSTRAINT CK_Reminders_Status CHECK (Status IN ('Pending','Processed','Failed','Cancelled'))
+);
+GO
+CREATE TABLE dbo.AuditLogs (
+ AuditLogID BIGINT IDENTITY(1,1) PRIMARY KEY,
+ ActorUserID INT NULL,
+ EntityName VARCHAR(100) NOT NULL,
+ EntityID VARCHAR(80) NOT NULL,
+ Action VARCHAR(40) NOT NULL,
+ OldValues NVARCHAR(MAX) NULL,
+ NewValues NVARCHAR(MAX) NULL,
+ PreviousAuditLogID BIGINT NULL,
+ OccurredAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_AuditLogs_Actor FOREIGN KEY (ActorUserID) REFERENCES dbo.Users(UserID),
+ CONSTRAINT FK_AuditLogs_Previous FOREIGN KEY (PreviousAuditLogID) REFERENCES dbo.AuditLogs(AuditLogID),
+ CONSTRAINT CK_AuditLogs_OldJson CHECK (OldValues IS NULL OR ISJSON(OldValues) = 1),
+ CONSTRAINT CK_AuditLogs_NewJson CHECK (NewValues IS NULL OR ISJSON(NewValues) = 1)
+);
 GO
 
-IF COL_LENGTH(N'dbo.Appointments', N'ClientID') IS NULL
-    ALTER TABLE dbo.Appointments ADD ClientID int NULL;
+/* Query indexes */
+CREATE INDEX IX_Animals_Client ON dbo.Animals(ClientID);
+CREATE INDEX IX_Appointments_AnimalTime ON dbo.Appointments(AnimalID, AppointmentTime DESC);
+CREATE INDEX IX_Appointments_VetTime ON dbo.Appointments(VeterinarianID, AppointmentTime);
+CREATE INDEX IX_QueueEntries_DateStatus ON dbo.QueueEntries(QueueDate, Status, QueueNumber);
+CREATE INDEX IX_Encounters_VetTime ON dbo.Encounters(VeterinarianID, ExaminedAt DESC);
+CREATE INDEX IX_Prescriptions_Encounter ON dbo.Prescriptions(EncounterID);
+CREATE INDEX IX_PrescriptionItems_Prescription ON dbo.PrescriptionItems(PrescriptionID);
+CREATE INDEX IX_VetSchedules_VetStart ON dbo.VeterinarianSchedules(VeterinarianID, StartAt);
+CREATE INDEX IX_ServiceOrders_Encounter ON dbo.ServiceOrders(EncounterID);
+CREATE INDEX IX_Batches_Expiry ON dbo.MedicineBatches(ExpiryDate, MedicineID);
+CREATE INDEX IX_StockMovements_BatchTime ON dbo.StockMovements(BatchID, CreatedAt DESC);
+CREATE INDEX IX_Dispensations_Prescription ON dbo.Dispensations(PrescriptionID);
+CREATE INDEX IX_BillItems_Bill ON dbo.BillItems(BillID);
+CREATE INDEX IX_Payments_Bill ON dbo.Payments(BillID, PaidAt DESC);
+CREATE INDEX IX_Reminders_DueStatus ON dbo.Reminders(Status, DueAt);
+CREATE INDEX IX_AuditLogs_Entity ON dbo.AuditLogs(EntityName, EntityID, OccurredAt DESC);
 GO
 
-IF COL_LENGTH(N'dbo.Appointments', N'ServiceID') IS NULL
-    ALTER TABLE dbo.Appointments ADD ServiceID int NULL;
+/* Seed: roles, services, medicine catalogue. No hardcoded demo passwords. */
+INSERT INTO dbo.Roles (RoleName, Description) VALUES
+ ('Admin',N'Quản trị hệ thống'),
+ ('Client',N'Chủ thú cưng'),
+ ('Receptionist',N'Nhân viên lễ tân'),
+ ('Veterinarian',N'Bác sĩ thú y'),
+ ('DispensingStaff',N'Nhân viên cấp phát thuốc'),
+ ('Cashier',N'Nhân viên thu ngân'),
+ ('ClinicManager',N'Quản lý phòng khám');
+GO
+INSERT INTO dbo.Services (ServiceName, Description, CurrentPrice) VALUES
+ (N'Khám tổng quát',N'Khám lâm sàng cơ bản',150000),
+ (N'Xét nghiệm máu',N'Nhập kết quả xét nghiệm thủ công',250000),
+ (N'Siêu âm',N'Nhập kết quả siêu âm thủ công',300000),
+ (N'Tiêm phòng',N'Dịch vụ tiêm phòng thú y',200000),
+ (N'Tái khám',N'Khám lại theo lịch hẹn',100000);
+GO
+INSERT INTO dbo.Medicines (MedicineName, Unit, CurrentPrice) VALUES
+ (N'Thuốc mẫu A',N'Viên',10000),
+ (N'Thuốc mẫu B',N'Chai',65000),
+ (N'Dung dịch mẫu C',N'Ống',30000);
 GO
 
-IF OBJECT_ID(N'dbo.Visits', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Visits
-    (
-        VisitID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Visits PRIMARY KEY,
-        AppointmentID int NOT NULL,
-        CheckInAt datetime2(0) NOT NULL,
-        ReceptionistID int NOT NULL,
-        Status nvarchar(20) NOT NULL,
-        CompletedAt datetime2(0) NULL,
-        CONSTRAINT FK_Visits_Appointments FOREIGN KEY (AppointmentID) REFERENCES dbo.Appointments(AppointmentID),
-        CONSTRAINT FK_Visits_Receptionists FOREIGN KEY (ReceptionistID) REFERENCES dbo.Users(UserID)
-    );
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Visits_AppointmentID' AND object_id = OBJECT_ID(N'dbo.Visits'))
-    CREATE UNIQUE INDEX IX_Visits_AppointmentID ON dbo.Visits(AppointmentID);
-GO
-
-IF OBJECT_ID(N'dbo.QueueEntries', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.QueueEntries
-    (
-        QueueEntryID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_QueueEntries PRIMARY KEY,
-        VisitID int NOT NULL,
-        QueueDate date NOT NULL,
-        QueueNumber int NOT NULL,
-        Status nvarchar(20) NOT NULL,
-        CalledAt datetime2(0) NULL,
-        CONSTRAINT FK_QueueEntries_Visits FOREIGN KEY (VisitID) REFERENCES dbo.Visits(VisitID)
-    );
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_QueueEntries_VisitID' AND object_id = OBJECT_ID(N'dbo.QueueEntries'))
-    CREATE UNIQUE INDEX IX_QueueEntries_VisitID ON dbo.QueueEntries(VisitID);
-GO
-
-IF OBJECT_ID(N'dbo.ClinicSettings', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.ClinicSettings
-    (
-        ClinicSettingID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ClinicSettings PRIMARY KEY,
-        ClinicName nvarchar(120) NOT NULL,
-        Address nvarchar(255) NULL,
-        Phone nvarchar(20) NULL,
-        Email nvarchar(150) NULL,
-        SlotMinutes int NOT NULL CONSTRAINT DF_ClinicSettings_Slot DEFAULT (30),
-        OpenHour int NOT NULL CONSTRAINT DF_ClinicSettings_Open DEFAULT (8),
-        CloseHour int NOT NULL CONSTRAINT DF_ClinicSettings_Close DEFAULT (17),
-        UpdatedAt datetime2(0) NOT NULL CONSTRAINT DF_ClinicSettings_Updated DEFAULT (SYSUTCDATETIME())
-    );
-END
-GO
-
-IF OBJECT_ID(N'dbo.Services', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Services
-    (
-        ServiceID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Services PRIMARY KEY,
-        Name nvarchar(120) NOT NULL,
-        Category nvarchar(30) NOT NULL,
-        DurationMinutes int NOT NULL,
-        Price decimal(12,0) NOT NULL,
-        Description nvarchar(500) NULL,
-        IsActive bit NOT NULL CONSTRAINT DF_Services_IsActive DEFAULT (1)
-    );
-END
-GO
-
-IF OBJECT_ID(N'dbo.StaffSchedules', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.StaffSchedules
-    (
-        StaffScheduleID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_StaffSchedules PRIMARY KEY,
-        UserID int NOT NULL,
-        DayOfWeek tinyint NOT NULL,
-        StartTime time(0) NOT NULL,
-        EndTime time(0) NOT NULL,
-        IsWorking bit NOT NULL CONSTRAINT DF_StaffSchedules_IsWorking DEFAULT (1),
-        CONSTRAINT FK_StaffSchedules_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
-    );
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_StaffSchedules_User_Day' AND object_id = OBJECT_ID(N'dbo.StaffSchedules'))
-    CREATE UNIQUE INDEX IX_StaffSchedules_User_Day ON dbo.StaffSchedules(UserID, DayOfWeek);
-GO
-
-IF OBJECT_ID(N'dbo.BlockedTimes', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.BlockedTimes
-    (
-        BlockedTimeID int IDENTITY(1,1) NOT NULL CONSTRAINT PK_BlockedTimes PRIMARY KEY,
-        UserID int NOT NULL,
-        StartAt datetime2(0) NOT NULL,
-        EndAt datetime2(0) NOT NULL,
-        Reason nvarchar(200) NULL,
-        CONSTRAINT FK_BlockedTimes_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
-    );
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Appointments_Clients')
-    AND COL_LENGTH(N'dbo.Appointments', N'ClientID') IS NOT NULL
-BEGIN
-    ALTER TABLE dbo.Appointments
-        ADD CONSTRAINT FK_Appointments_Clients FOREIGN KEY (ClientID) REFERENCES dbo.Clients(ClientID);
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Appointments_Services')
-    AND OBJECT_ID(N'dbo.Services', N'U') IS NOT NULL
-    AND COL_LENGTH(N'dbo.Appointments', N'ServiceID') IS NOT NULL
-BEGIN
-    ALTER TABLE dbo.Appointments
-        ADD CONSTRAINT FK_Appointments_Services FOREIGN KEY (ServiceID) REFERENCES dbo.Services(ServiceID);
-END
+/* Developer notes:
+ 1) Create Users via the app with a secure password hasher (e.g., ASP.NET Core PasswordHasher).
+ 2) A FK cannot enforce User.RoleName = 'Veterinarian'; enforce via service layer and authorization.
+ 3) Booking overlap, vet schedule availability, owner authorization and late-arrival policy require service logic.
+ 4) Dispense: in ONE SERIALIZABLE/locked transaction validate finalized prescription, matching
+    medicine, cumulative prescribed quantity, batch expiry and on-hand stock; insert item/movement,
+    update QuantityOnHand, complete dispense. Do not deduct stock on prescription finalization.
+ 5) Bill creation: only eligible completed service orders / completed dispenses; capture immutable
+    price snapshots. Recompute Bills.TotalAmount from BillItems inside transaction.
+ 6) Payment: within a transaction verify remaining balance, insert once using RequestKey,
+    update bill status; never equate 'Paid' with 'Dispensed'.
+ 7) Keep AuditLogs append-only via application permissions; preserve clinical corrections.
+ 8) Times use UTC in defaults; convert to Vietnam local time in the UI.
+ 9) This is a first-release schema, not a validated production medical system.
+*/
+PRINT N'VCMS database schema and seed data created successfully.';
 GO

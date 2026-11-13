@@ -86,7 +86,7 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var phone = Input.Phone.Trim();
+        var phone = Input.Phone?.Trim() ?? "";
         var email = Clean(Input.Email);
         if (await _db.Clients.AnyAsync(c => c.Phone == phone))
         {
@@ -96,6 +96,8 @@ public class CreateModel : PageModel
         User? login = null;
         if (!Input.CreateLogin)
         {
+            if (await _db.Clients.AnyAsync(c => c.UserID == null))
+                ModelState.AddModelError("", "CSDL hiện chỉ cho phép một hồ sơ chưa có tài khoản. Hãy tạo tài khoản cho khách này.");
             ModelState.Remove("Input.Username");
             ModelState.Remove("Input.Password");
         }
@@ -196,7 +198,7 @@ public class EditModel : PageModel
             return NotFound();
         }
 
-        var phone = Input.Phone.Trim();
+        var phone = Input.Phone?.Trim() ?? "";
         if (await _db.Clients.AnyAsync(c => c.ClientID != id && c.Phone == phone))
         {
             ModelState.AddModelError("Input.Phone", "Số điện thoại đã có trong hồ sơ khách hàng.");

@@ -32,10 +32,9 @@
                     <span asp-validation-for="Input.AnimalID" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Input.ServiceID" class="form-label">Dịch vụ</label>
-                    <select asp-for="Input.ServiceID" asp-items="Model.ServiceOptions" class="form-select" id="service-select">
-                        <option value="">-- Chọn dịch vụ --</option>
-                    </select>
+                    <label asp-for="Input.DurationMinutes" class="form-label">Thời lượng (phút)</label>
+                    <input asp-for="Input.DurationMinutes" type="number" min="5" max="480" class="form-control" id="duration-input" />
+                    <span asp-validation-for="Input.DurationMinutes" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Input.ProviderID" class="form-label">Bác sĩ / nhân viên</label>
@@ -77,7 +76,7 @@
     <script>
         const clientSelect = document.getElementById("client-select");
         const animalSelect = document.getElementById("animal-select");
-        const serviceSelect = document.getElementById("service-select");
+        const durationInput = document.getElementById("duration-input");
         const providerSelect = document.getElementById("provider-select");
         const dateInput = document.getElementById("date-input");
         const slotSelect = document.getElementById("slot-select");
@@ -96,24 +95,20 @@
         }
 
         async function loadAnimals() {
-            if (!clientSelect || !clientSelect.value) return;
+            if (!clientSelect) return;
+            fillSelect(animalSelect, [], "-- Chọn thú cưng --");
+            if (!clientSelect.value) return;
             const response = await fetch(`?handler=Animals&clientId=${clientSelect.value}`);
             fillSelect(animalSelect, await response.json(), "-- Chọn thú cưng --");
         }
 
-        async function loadProviders() {
-            if (!serviceSelect.value) return;
-            const response = await fetch(`?handler=Providers&serviceId=${serviceSelect.value}`);
-            fillSelect(providerSelect, await response.json(), "-- Chọn nhân viên --");
-            await loadSlots();
-        }
-
         async function loadSlots() {
-            if (!providerSelect.value || !serviceSelect.value || !dateInput.value) return;
+            fillSelect(slotSelect, [], "-- Chọn khung giờ --");
+            if (!providerSelect.value || !durationInput.value || !dateInput.value) return;
             const params = new URLSearchParams({
                 handler: "Slots",
                 providerId: providerSelect.value,
-                serviceId: serviceSelect.value,
+                durationMinutes: durationInput.value,
                 date: dateInput.value
             });
             if (ignoreId) params.set("ignoreId", ignoreId);
@@ -122,7 +117,7 @@
         }
 
         clientSelect?.addEventListener("change", loadAnimals);
-        serviceSelect.addEventListener("change", loadProviders);
+        durationInput.addEventListener("change", loadSlots);
         providerSelect.addEventListener("change", loadSlots);
         dateInput.addEventListener("change", loadSlots);
     </script>

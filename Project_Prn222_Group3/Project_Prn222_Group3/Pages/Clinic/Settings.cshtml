@@ -1,62 +1,6 @@
 @page
 @model Project_Prn222_Group3.Pages.Clinic.SettingsModel
-@{
-    ViewData["Title"] = "Cấu hình phòng khám";
-}
-
-<div class="mb-4">
-    <h1 class="h3 mb-1">Cấu hình phòng khám</h1>
-    <p class="text-muted mb-0">Thông tin liên hệ và khung giờ dùng để tính lịch trống.</p>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="Input.ClinicName" class="form-label">Tên phòng khám</label>
-                    <input asp-for="Input.ClinicName" class="form-control" />
-                    <span asp-validation-for="Input.ClinicName" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Input.Phone" class="form-label">Số điện thoại</label>
-                    <input asp-for="Input.Phone" class="form-control" />
-                    <span asp-validation-for="Input.Phone" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <input asp-for="Input.Email" class="form-control" />
-                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Input.Address" class="form-label">Địa chỉ</label>
-                    <input asp-for="Input.Address" class="form-control" />
-                    <span asp-validation-for="Input.Address" class="text-danger small"></span>
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="Input.OpenHour" class="form-label">Giờ mở cửa</label>
-                    <input asp-for="Input.OpenHour" class="form-control" />
-                    <span asp-validation-for="Input.OpenHour" class="text-danger small"></span>
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="Input.CloseHour" class="form-label">Giờ đóng cửa</label>
-                    <input asp-for="Input.CloseHour" class="form-control" />
-                    <span asp-validation-for="Input.CloseHour" class="text-danger small"></span>
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="Input.SlotMinutes" class="form-label">Mỗi khung giờ (phút)</label>
-                    <input asp-for="Input.SlotMinutes" class="form-control" />
-                    <span asp-validation-for="Input.SlotMinutes" class="text-danger small"></span>
-                </div>
-            </div>
-            <div class="mt-4">
-                <button type="submit" class="btn btn-vcms">Lưu cấu hình</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+@{ ViewData["Title"] = "Chức năng chưa khả dụng"; }
+<h1 class="h3">Chức năng chưa khả dụng</h1>
+<p>Trang cấu hình cũ đã ngừng sử dụng. Chức năng này đang chờ nhóm phân công lại.</p>
+<a asp-page="/Index" class="btn btn-outline-secondary">Về trang chủ</a>

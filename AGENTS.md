@@ -1,179 +1,93 @@
-# VCMS — Codex Handoff Context
+# VCMS — Nghĩa: Examination & Pharmacy
 
-## 1. What this project is
+## Current scope and ownership (2026-11-13)
 
-PRN222 group project: **Veterinary Clinic Management System (VCMS)**.
+ASP.NET Core Razor Pages, .NET 8, EF Core 8, SQL Server; Vietnamese UI; UTC persistence and Vietnam (+7) display via `ClinicTime`.
+Repository: `E:\Study\Fall26\PRN222\GroupProject\Project_prn222`, branch `nghia`.
 
-- ASP.NET Core **Razor Pages**, .NET 8
-- EF Core 8 + SQL Server
-- Cookie authentication with role-based authorization
-- UI text is **Vietnamese**
-- No EF migrations: schema is created by `VCMS_Database.sql`, demo data by `DbSeeder`
+Authoritative assignment: `E:\Study\Fall26\PRN222\Context\luồng từng người.txt`.
+- Nguyễn Trung Nghĩa: Examination & Pharmacy, UC-12/13/14/18/19/20.
+- Tùng: clients, pets, appointments. Existing pages received only DB compatibility/security fixes.
+- Kiệt: authentication, reception/check-in/queue. Preserve teammate implementation.
+- Linh: dashboard and audit module. This module only appends audit records and reads its own clinical history; no audit administration/dashboard is implemented.
+- Huy and Hoàng have left. Their services/schedule management, billing/payments/PDF, service orders/results and reminders are **not reassigned to Nghĩa**. Do not implement these without a new assignment.
 
-Local repo: `E:\Study\Fall26\PRN222\GroupProject\Project_prn222`
-Remote: `https://github.com/Tungpro1236/Project_prn222.git`
-Current branch: `nghia`
+Previous FE-01..FE-03 scope was inferred incorrectly. The previous prohibition on examination/pharmacy is obsolete. The previous handoff's uncommitted/merge-only Git descriptions and demo credentials are obsolete too.
 
-## 2. Git state and constraints
+The implementation was initially kept uncommitted for review. The user subsequently authorized committing and pushing it to `nghia`. Future commits/pushes still require a user request. Do not merge `dev_tung`; historically it had an empty tree. Never reset or overwrite others' work.
 
-- `nghia` was created from `Kiet`; `linh` was merged.
-- Merge commit `5611020` is **local only**.
-- The FE-01/FE-02/FE-03 work listed below is **uncommitted** in the working tree.
-- `dev_tung` (`7a6f3ce`) has an **empty tree**. Do **not** merge it — it would delete the project.
-- Do **not** push unless the user explicitly asks.
-- Remote branches `Kiet`, `linh`, `main` are already merged into `nghia`.
-- `Project_Prn222_Group3` is nested twice on disk:
-  `Project_prn222\Project_Prn222_Group3\Project_Prn222_Group3\Project_Prn222_Group3.csproj`
+## Team database
 
-## 3. Build and run
+Authoritative input: `E:\Study\Fall26\PRN222\Context\VCMS_Database.sql`.
+Root `VCMS_Database.sql` is now the same team schema, replacing the earlier incompatible 11-table script.
+The team SQL creates **24 tables**. It is a **fresh-database creation script**, not an idempotent upgrade script. Do not rerun it on an existing DB, drop/recreate a user's DB, or introduce migrations/schema changes without explicit authorization.
 
-```powershell
-dotnet build "E:\Study\Fall26\PRN222\GroupProject\Project_prn222\Project_Prn222_Group3\Project_Prn222_Group3\Project_Prn222_Group3.csproj"
+Development connection: `localhost`, `VeterinaryClinicDB`, Windows authentication, TrustServerCertificate=True. Keep teammate `appsettings.json` intact; `appsettings.Development.json` supplies the local override.
 
-dotnet run --project "E:\Study\Fall26\PRN222\GroupProject\Project_prn222\Project_Prn222_Group3\Project_Prn222_Group3\Project_Prn222_Group3.csproj" --urls "http://127.0.0.1:5248"
-```
+Actual schema conventions:
+- `Appointments` has AnimalID/VeterinarianID and ExpectedDurationMinutes; **no ClientID or ServiceID**. Owner comes from Animal.Client.
+- `Services`: ServiceName, CurrentPrice decimal(18,2), Description, IsActive. No category or duration.
+- `VeterinarianSchedules`: individual UTC intervals, IsAvailable. Booking reads available intervals and subtracts unavailable intervals; 5-minute slot step. No invented clinic hours, weekly schedule or grooming support.
+- No ClinicSettings, StaffSchedules or BlockedTimes tables. Obsolete `/Clinic/*` management pages show an unavailable notice and have no DB writes or navigation links.
+- Clinical/pharmacy mapping uses the exact team types, lengths, nullability and table names. Unowned billing/orders/reminder models are not implemented.
 
-The last verified build had **0 warnings and 0 errors**.
-
-## 4. Local database
-
-- SQL Server instance: `localhost` / `DESKTOP-I74VCAM`
-- Database: `VeterinaryClinicDB`
-- Local auth: **Windows authentication** (the `sa` login does not work locally)
-- `appsettings.Development.json` uses:
-  `Server=localhost;Database=VeterinaryClinicDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True`
-- Shared `appsettings.json` still targets `LAPTOP-NMGC06E7` with `sa`/`123`; leave it unless the user asks.
-- Apply schema with:
+Normal startup calls only the database connectivity check in `DbSeeder`. It does **not** create schemas, demo users, roles, clinical data, services or stock.
+The current team DB initially had no user accounts. Explicit one-time admin provisioning, only when Users is empty:
 
 ```powershell
-sqlcmd -S localhost -d master -E -i "E:\Study\Fall26\PRN222\GroupProject\Project_prn222\VCMS_Database.sql"
+$env:VCMS_BOOTSTRAP_PASSWORD = '<choose a unique password of at least 12 characters>'
+dotnet run --project .\Project_Prn222_Group3\Project_Prn222_Group3 -- --bootstrap-admin
+Remove-Item Env:\VCMS_BOOTSTRAP_PASSWORD
 ```
 
-`VCMS_Database.sql` is idempotent and creates:
-`Roles`, `Users`, `Clients`, `Animals`, `Appointments`, `Visits`, `QueueEntries`,
-`ClinicSettings`, `Services`, `StaffSchedules`, `BlockedTimes`.
+This command creates username `admin` with ASP.NET Core PasswordHasher. It is never run implicitly. Then use existing Staff pages to create veterinarian/dispensing accounts. Do not print passwords in logs or restore old demo credentials.
 
-`DbSeeder` runs on startup and seeds roles, demo users, one client with two pets,
-clinic settings, three services, weekday schedules, a lunch block, and two demo appointments.
+## Implemented module
 
-### Demo accounts
+- `/Examination`: recent checked-in visits, assigned-vet filtering; admins can read.
+- `/Examination/Edit/{visitId}`: draft examination, finalization, reasoned correction, old/new history; one encounter per visit as required by the current unique key.
+- `/Examination/Prescription/{id}`: one current non-cancelled prescription per encounter, draft item add/edit/remove, finalization and cancellation before any completed dispensing.
+- `/Pharmacy`: medicines and finalized prescription queue.
+- `/Pharmacy/Medicine/{id?}`: medicine create/edit/deactivate.
+- `/Pharmacy/Stock`: receive batches, signed adjustments with reasons, lot balances and movement history.
+- `/Pharmacy/Dispense/{prescriptionId}`: remaining prescribed quantities, expiry-ordered lot choices, partial/multi-batch dispensing and completed history.
 
-| Username | Password | Role |
-|---|---|---|
-| `manager` | `Manager@123` | ClinicManager |
-| `reception` | `Reception@123` | Receptionist |
-| `vet1` | `Vet@123` | Veterinarian |
-| `groomer1` | `Groomer@123` | PetGroomer |
-| `client1` | `Client@123` | Client (owns Miu and Bông) |
+Architecture:
+- `Models/Entities.cs`, `Data/VcmsDbContext.cs`: shared/team and owned module mappings.
+- `Services/ModuleService.cs`: active-user authorization, transaction and SQL application lock helper, append-only audit writer.
+- `Services/ExaminationService.cs`: assigned-vet clinical/prescription rules.
+- `Services/PharmacyService.cs`: catalogue, stock and dispensing rules.
+- `Services/PrescriptionSnapshots.cs`: immutable prescription name/unit/price/quantity snapshot reader from audit.
+- `Infrastructure/InvariantDecimalModelBinder.cs`: HTML number fields use dot decimals regardless of Windows vi-VN locale. Never revert to locale-dependent decimal parsing (123.45 can otherwise become 12345).
+- `Services/BookingService.cs`: team-schema compatibility for the existing booking workflow; not ownership of Tùng's feature.
 
-## 5. Architecture map
+## Rules to preserve
 
-| Area | Path |
-|---|---|
-| Startup, DI, auth | `Program.cs` |
-| DbContext | `Data\VcmsDbContext.cs` |
-| Seed data | `Data\DbSeeder.cs` |
-| Entities | `Models\Entities.cs` |
-| Roles / role groups | `Models\AppRoles.cs` |
-| Status constants + display text | `Models\Statuses.cs` |
-| UTC <-> Vietnam time (+7) | `Models\ClinicTime.cs` |
-| Booking rules | `Services\BookingService.cs` |
-| Check-in / queue | `Services\ReceptionService.cs` (teammate code) |
-| Appointment pages | `Pages\Appointments\` |
-| Customer / pet pages | `Pages\Customers\` |
-| Clinic configuration pages | `Pages\Clinic\` |
-| Staff account pages | `Pages\Staff\` |
-| Reception pages | `Pages\Reception\` |
-| Client portal | `Pages\Client\` |
+1. Only an active Veterinarian assigned to the appointment and encounter may mutate clinical records. Admin clinical access is read-only. ClinicManager/DispensingStaff/Admin may manage pharmacy; clients/receptionists cannot.
+2. Finalizing an encounter requires a diagnosis. Finalized notes require a correction reason; retain old/new values in an audit entry. Do not create a second encounter for the same visit or silently rewrite history.
+3. Prescription finalization requires a finalized/corrected encounter and active valid medicines. Finalized items cannot be edited. Never deduct stock while prescribing. Cancellation is blocked after any completed dispense.
+4. Snapshot medicine names, units, prices and quantities in the prescription's `Finalize` audit JSON because the schema has no snapshot columns. Read those names/prices in finalized views and dispensing. Reject dispensing of legacy externally-finalized prescriptions without a valid snapshot instead of silently using the latest price.
+5. Clinical and pharmacy writes use a shared `VCMS:Care` SQL application lock inside a Serializable transaction. This coordinates prescription cancellation/finalization with stock operations across app processes. Booking uses `VCMS:Booking`. All validation and parent/child/stock/audit writes share the transaction; failure rolls back.
+6. Dispense only finalized prescriptions for non-cancelled visits, correct active medicine, unexpired batch (expiry date is valid through that Vietnam calendar day), adequate lot stock, and cumulative quantity no greater than prescribed. Allow partial and multi-batch issuance.
+7. Dispense RequestKey replay with the identical actor/prescription/lines returns the original operation; another payload with that key is rejected. Completed parent records cannot be created without child items through this service.
+8. Stock receipt/adjustment/dispensing must change QuantityOnHand and append matching StockMovements atomically; stock cannot become negative. Never expose a direct balance edit field.
+9. Audit rows are append-only in this app: DbContext rejects modifications/deletions. Do not add audit edit/delete endpoints. This is not a SQL privilege restriction; direct SQL/admin writes can bypass application checks.
+10. Retain UI Vietnamese, antiforgery on POST, authorization in services as well as page models, and UTC timestamps.
 
-## 6. Implemented work (FE-01, FE-02, FE-03)
+## Known schema limits / non-goals
 
-### FE-01 — Clinic configuration (managers only)
+The schema still requires appointments for visits and one encounter per visit; no walk-in redesign is included. Corrections use audit history rather than another encounter row. Grooming, recurring weekly schedules/clinic hours, independent non-clinical billing, service orders/results, reminders, payments and PDF receipts remain out of scope. Suppliers/purchase orders/reorder levels need schema/team agreement and are not invented here. Application rules cannot prevent an administrator or another app from writing invalid rows directly in SQL. DB-wide audit immutability and billing integrity require the owning team's work.
 
-- `Pages\Clinic\Settings` — clinic name, address, phone, email, slot size, open/close hours.
-- `Pages\Clinic\Services` — service create/edit, category (`Veterinary` / `Grooming`), duration, price, active flag.
-- `Pages\Clinic\Schedules` — weekly staff schedule plus blocked time ranges.
-- Authorization: `AppRoles.Managers` (`Admin`, `ClinicManager`).
-- Schedule/block forms use separate POST handlers and `ModelState.Clear()` + `TryUpdateModelAsync` so the two forms validate independently.
+Clients.UserID is an unfiltered nullable UNIQUE key in the team SQL, permitting only one client without a login. The existing customer form reports this constraint rather than assuming unlimited anonymous profiles. No schema change was made.
 
-### FE-02 — Customer and pet records (record editors)
+## Build, run and verification
 
-- `Pages\Customers\Index` — search by name / phone / email, client list with pet counts.
-- `Pages\Customers\Create` — create client, optional client login account.
-- `Pages\Customers\Details` — client profile, pets, linked login.
-- `Pages\Customers\Edit` — edit client.
-- `Pages\Customers\Pet` — add/edit pet (species, breed, gender, DOB, weight, notes, active).
-- Authorization: `AppRoles.RecordEditors` (`Admin`, `Receptionist`, `ClinicManager`).
-- `CreateClient` validates duplicate phone, optional login fields only when `CreateLogin` is checked, and duplicate username/email.
-- Clients cannot access these staff pages.
+```powershell
+dotnet build .\Project_Prn222_Group3\Project_Prn222_Group3\Project_Prn222_Group3.csproj
+dotnet run --project .\Project_Prn222_Group3\Project_Prn222_Group3 --urls http://127.0.0.1:5248
+dotnet run --project .\Tests\VCMS.Integration\VCMS.Integration.csproj
+```
 
-### FE-03 — Availability and booking
+Integration tests need local SQL Server and Windows permission to create/drop a test database. They create a random `VCMS_Test_<32 hex characters>` DB from the team SQL, generate synthetic users/data, test real SQL transactions/concurrency and real cookie/antiforgery HTTP forms, then stop their server and drop only that generated DB. They never write to VeterinaryClinicDB. Port 5249 is used for their temporary server. `--preview` keeps that disposable server open until Enter is pressed; always stop the preview so its DB is cleaned up.
 
-- `Pages\Appointments\Index` — list appointments.
-  - Clients see only their own pets' appointments (all dates).
-  - Veterinarians / groomers see only their own appointments for one selected day.
-  - Bookers see the selected day's appointments.
-  - `CanBook` controls whether the "Đặt lịch" button and row actions render.
-- `Pages\Appointments\Book` — create or reschedule.
-  - AJAX handlers: `?handler=Animals`, `?handler=Providers`, `?handler=Slots`.
-  - Provider role is chosen from service category: grooming -> `PetGroomer`, otherwise `Veterinarian`.
-- `Pages\Appointments\Cancel` — POST-only cancel.
-- Authorization: viewers = `AppRoles.AppointmentViewers`;
-  book/reschedule/cancel = `AppRoles.Bookers` (`Admin`, `Receptionist`, `ClinicManager`, `Client`).
-
-## 7. Business rules (must stay intact)
-
-- **All appointment times are stored in UTC.** Vietnam is a fixed +7 offset via `ClinicTime`.
-- Active statuses that occupy a slot: `Pending`, `Confirmed`, `CheckedIn`.
-- Available slots are the intersection of:
-  - clinic open/close hours,
-  - the provider's `StaffSchedules` row for that weekday (`IsWorking`),
-  - not overlapping active appointments,
-  - not overlapping `BlockedTimes`,
-  - starting after "now" in Vietnam time.
-- Slot step comes from `ClinicSettings.SlotMinutes` (minimum 5); service duration decides slot length.
-- Booking validation requires the start minute to be divisible by 5 and seconds to be 0.
-- Staff-created bookings are `Confirmed`; client-created bookings are `Pending`.
-- Rescheduling a client booking sets it back to `Pending`; staff reschedules keep `Confirmed`.
-- Clients can only book, reschedule, or cancel appointments for their **own** pets.
-  This is enforced server-side in `BookingService.ValidateAsync`, `RescheduleAsync`, and `CancelAsync`.
-- Veterinarians and groomers are **read-only**: they may view their own appointments but cannot book, reschedule, or cancel.
-- Only `Pending` or `Confirmed` appointments can be rescheduled or cancelled.
-- Booking uses a `Serializable` transaction with one retry on `DbUpdateException`.
-
-## 8. Verification already done
-
-The running app was tested over HTTP (login, antiforgery tokens, real POSTs):
-
-- Reception books an open slot successfully; the same slot is rejected as taken.
-- Client books own pet successfully; booking another client's pet is rejected.
-- Reschedule works and updates the stored UTC time.
-- Cancel works; cancelled slots become available again.
-- The seeded 12:00–13:00 lunch block is excluded from slots.
-- Duplicate customer phone is rejected; new customer + pet can be created.
-- Access control:
-  - `vet1` / `groomer1`: `/Appointments` 200; `/Appointments/Book`, `/Customers`, `/Clinic/*` redirect to AccessDenied.
-  - `client1`: `/Appointments/Book` 200; `/Customers`, `/Clinic/*` AccessDenied.
-  - `reception`: `/Clinic/*` AccessDenied.
-- Temporary test appointments, client, and pet were deleted afterwards; demo data is clean.
-
-There are **no automated tests** in the repo; the above was manual HTTP verification.
-
-## 9. Known gaps / likely next work
-
-- No written personal assignment exists; FE-01..FE-03 were inferred for Nguyễn Trung Nghĩa (Backend Developer).
-- Do **not** build clinical encounters, pharmacy, billing, or reports — outside the assigned scope.
-- `appsettings.json` is still machine-specific to a teammate's laptop.
-- No EF migrations; if the schema changes, update both `VCMS_Database.sql` and `VcmsDbContext`.
-- The local app process is stopped; port 5248 is free.
-
-## 10. Instructions for Codex
-
-1. Read this file before changing code.
-2. Keep the existing structure, naming, and Vietnamese UI copy.
-3. Run `dotnet build` after changes and report warnings/errors.
-4. Keep appointment timestamps in UTC; use `ClinicTime` for any local conversion.
-5. Enforce authorization in the page model / service, not only in the UI.
-6. Do not merge `dev_tung`.
-7. Do not push or commit unless the user asks.
-8. Do not delete or rewrite teammates' unrelated work; investigate first.
+See `IMPLEMENTATION_REPORT.md` for final verification, assumptions and remaining integration boundaries. Run build/tests after relevant backend changes. Do not claim that a successful build alone proves DB compatibility.
