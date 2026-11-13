@@ -1,0 +1,119 @@
+@page
+@model Project_Prn222_Group3.Pages.Reception.CheckInModel
+@{
+    ViewData["Title"] = "Check-in bệnh nhân";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Check-in bệnh nhân</h1>
+        <p class="text-muted mb-0">Lịch hẹn ngày @Model.Today.ToString("dd/MM/yyyy").</p>
+    </div>
+    <a asp-page="Queue" class="btn btn-outline-secondary">Xem hàng đợi</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card"><span>Đang chờ</span><strong>@Model.WaitingCount</strong></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card"><span>Đã gọi / đang phục vụ</span><strong>@Model.ServingCount</strong></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card"><span>Hoàn tất</span><strong>@Model.DoneCount</strong></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card"><span>Số đã cấp</span><strong>@Model.LastNumber</strong></div>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-sm-7 col-md-5">
+        <input name="q" value="@Model.Q" class="form-control" placeholder="Tìm chủ nuôi, số điện thoại, tên thú cưng hoặc mã lịch hẹn" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-vcms">Tìm</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Q))
+        {
+            <a asp-page="CheckIn" class="btn btn-outline-secondary">Xóa lọc</a>
+        }
+    </div>
+</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Giờ hẹn</th>
+                    <th>Chủ nuôi</th>
+                    <th>Thú cưng</th>
+                    <th>Bác sĩ</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Appointments.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Không có lịch hẹn phù hợp trong hôm nay.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var appointment in Model.Appointments)
+                {
+                    var canCheckIn = appointment.Visit is null &&
+                        appointment.Status is AppointmentStatuses.Pending or AppointmentStatuses.Confirmed;
+
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@ClinicTime.FormatTime(appointment.AppointmentTime)</div>
+                            <div class="text-muted small">#@appointment.AppointmentID</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@appointment.Animal.Client.FullName</div>
+                            <div class="text-muted small">@appointment.Animal.Client.Phone</div>
+                        </td>
+                        <td>
+                            <div>@appointment.Animal.Name</div>
+                            <div class="text-muted small">@appointment.Animal.Species</div>
+                        </td>
+                        <td>@appointment.Veterinarian.FullName</td>
+                        <td>
+                            <span class="badge @DisplayText.AppointmentBadge(appointment.Status)">
+                                @DisplayText.AppointmentStatus(appointment.Status)
+                            </span>
+                            @if (appointment.Visit?.QueueEntry is not null)
+                            {
+                                <div class="mt-1 small text-muted">
+                                    Số thứ tự: <span class="fw-bold text-vcms">@appointment.Visit.QueueEntry.QueueNumber</span>
+                                </div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (canCheckIn)
+                            {
+                                <form method="post" asp-page-handler="CheckIn" class="d-inline"
+                                      onsubmit="return confirm('Xác nhận check-in và cấp số thứ tự cho bệnh nhân này?');">
+                                    <input type="hidden" name="appointmentId" value="@appointment.AppointmentID" />
+                                    <button type="submit" class="btn btn-sm btn-vcms">Check-in</button>
+                                </form>
+                            }
+                            else if (appointment.Visit is not null)
+                            {
+                                <span class="text-muted small">Đã check-in</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Không khả dụng</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

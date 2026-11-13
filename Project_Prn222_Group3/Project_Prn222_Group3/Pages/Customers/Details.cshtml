@@ -1,0 +1,95 @@
+@page "{id:int}"
+@model Project_Prn222_Group3.Pages.Customers.DetailsModel
+@{
+    ViewData["Title"] = Model.ClientRecord.FullName;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <a asp-page="Index" class="small text-decoration-none">&larr; Danh sách khách hàng</a>
+        <h1 class="h3 mt-2 mb-1">@Model.ClientRecord.FullName</h1>
+        <p class="text-muted mb-0">
+            @Model.ClientRecord.Phone
+            @if (!string.IsNullOrWhiteSpace(Model.ClientRecord.Email))
+            {
+                <span> · @Model.ClientRecord.Email</span>
+            }
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Edit" asp-route-id="@Model.ClientRecord.ClientID" class="btn btn-outline-secondary">Sửa hồ sơ</a>
+        <a asp-page="Pet" asp-route-clientId="@Model.ClientRecord.ClientID" class="btn btn-vcms">+ Thêm thú cưng</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="text-muted small">Địa chỉ</div>
+        <div>@(Model.ClientRecord.Address ?? "Chưa có")</div>
+        <div class="text-muted small mt-2">Tài khoản đăng nhập</div>
+        <div>@(Model.ClientRecord.User?.Username ?? "Chưa liên kết")</div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3"><h2 class="h6 mb-0">Thú cưng</h2></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>Tên</th><th>Loài</th><th>Giống</th><th>Cân nặng</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody>
+            @if (Model.ClientRecord.Animals.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-muted py-4">Chưa có thú cưng.</td></tr>
+            }
+            else
+            {
+                @foreach (var animal in Model.ClientRecord.Animals.OrderBy(a => a.Name))
+                {
+                    <tr>
+                        <td class="fw-semibold">@animal.Name</td>
+                        <td>@animal.Species</td>
+                        <td>@(animal.Breed ?? "—")</td>
+                        <td>@(animal.WeightKg.HasValue ? $"{animal.WeightKg:0.##} kg" : "—")</td>
+                        <td>@(animal.IsActive ? "Đang nuôi" : "Đã ngừng theo dõi")</td>
+                        <td class="text-end">
+                            <a asp-page="Pet" asp-route-clientId="@Model.ClientRecord.ClientID" asp-route-id="@animal.AnimalID" class="btn btn-sm btn-outline-primary">Sửa</a>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3"><h2 class="h6 mb-0">Lịch hẹn gần đây</h2></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>Thời gian</th><th>Thú cưng</th><th>Dịch vụ</th><th>Nhân viên</th><th>Trạng thái</th></tr>
+            </thead>
+            <tbody>
+            @if (Model.Appointments.Count == 0)
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">Chưa có lịch hẹn.</td></tr>
+            }
+            else
+            {
+                @foreach (var item in Model.Appointments)
+                {
+                    <tr>
+                        <td>@ClinicTime.Format(item.AppointmentTime)</td>
+                        <td>@item.Animal.Name</td>
+                        <td>@(item.Service?.Name ?? "—")</td>
+                        <td>@item.Veterinarian.FullName</td>
+                        <td><span class="badge @DisplayText.AppointmentBadge(item.Status)">@DisplayText.AppointmentStatus(item.Status)</span></td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
