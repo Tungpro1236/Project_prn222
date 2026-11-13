@@ -57,7 +57,9 @@ FOR JSON PATH,WITHOUT_ARRAY_WRAPPER
 """);
 var schemaBefore = await Schema();
 await File.WriteAllTextAsync(Path.Combine(local, "schema-before.json"), schemaBefore);
-if(await Scalar("SELECT COUNT(*) FROM sys.tables")!="24")
+// SSMS may add dbo.sysdiagrams. Require the team's tables without rejecting
+// unrelated local support tables or changing/deleting them.
+if(await Scalar("SELECT COUNT(*) FROM sys.tables WHERE schema_id=SCHEMA_ID('dbo') AND name IN ('Roles','Users','Clients','Animals','Appointments','Visits','QueueEntries','Encounters','Prescriptions','Services','VeterinarianSchedules','ServiceOrders','ServiceResults','Medicines','MedicineBatches','PrescriptionItems','Dispensations','DispensationItems','StockMovements','Bills','BillItems','Payments','Reminders','AuditLogs')")!="24")
     throw new InvalidOperationException("Cần schema nhóm 24 bảng. Xem database/VCMS_Database.sql; không chạy script tạo bảng lên DB có sẵn.");
 var backupPath="(DB kiểm thử dùng một lần; bỏ backup theo --skip-backup)";
 if(!args.Contains("--skip-backup"))
