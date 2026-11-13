@@ -18,11 +18,13 @@ builder.Services.AddScoped<ReceptionService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<ExaminationService>();
 builder.Services.AddScoped<PharmacyService>();
+builder.Services.AddScoped<ActiveUserCookieEvents>();
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.EventsType = typeof(ActiveUserCookieEvents);
         options.Cookie.Name = "Vcms.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;

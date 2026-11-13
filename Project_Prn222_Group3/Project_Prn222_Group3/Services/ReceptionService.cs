@@ -109,6 +109,7 @@ public class ReceptionService
         var today = ClinicTime.VnToday;
         var entry = await _db.QueueEntries
             .Include(q => q.Visit)
+                .ThenInclude(v => v.Appointment)
             .FirstOrDefaultAsync(q => q.QueueEntryID == queueEntryId && q.QueueDate == today);
 
         if (entry is null)
@@ -147,9 +148,16 @@ public class ReceptionService
                     return (false, "Chỉ có thể hoàn tất lượt đang phục vụ.");
                 }
 
+                if (entry.Visit.Appointment.Status != AppointmentStatuses.CheckedIn)
+                {
+                    return (false, "Lịch hẹn không còn ở trạng thái đã check-in. Vui lòng tải lại trang.");
+                }
+
                 entry.Status = QueueStatuses.Done;
                 entry.Visit.Status = VisitStatuses.Completed;
                 entry.Visit.CompletedAt = now;
+                // One SaveChanges transaction completes all three lifecycle records.
+                entry.Visit.Appointment.Status = AppointmentStatuses.Completed;
                 break;
 
             case QueueAction.Skip:

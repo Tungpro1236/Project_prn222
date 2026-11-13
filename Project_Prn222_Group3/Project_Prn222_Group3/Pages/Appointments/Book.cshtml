@@ -18,42 +18,44 @@
                 @if (!Model.IsClient)
                 {
                     <div class="col-md-6">
-                        <label asp-for="Input.ClientID" class="form-label">Khách hàng</label>
+                        <label for="client-select" class="form-label">Khách hàng</label>
                         <select asp-for="Input.ClientID" asp-items="Model.ClientOptions" class="form-select" id="client-select">
                             <option value="">-- Chọn khách hàng --</option>
                         </select>
                     </div>
                 }
                 <div class="col-md-6">
-                    <label asp-for="Input.AnimalID" class="form-label">Thú cưng</label>
+                    <label for="animal-select" class="form-label">Thú cưng</label>
                     <select asp-for="Input.AnimalID" asp-items="Model.AnimalOptions" class="form-select" id="animal-select">
                         <option value="">-- Chọn thú cưng --</option>
                     </select>
                     <span asp-validation-for="Input.AnimalID" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Input.DurationMinutes" class="form-label">Thời lượng (phút)</label>
+                    <label for="duration-input" class="form-label">Thời lượng (phút)</label>
                     <input asp-for="Input.DurationMinutes" type="number" min="5" max="480" class="form-control" id="duration-input" />
                     <span asp-validation-for="Input.DurationMinutes" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Input.ProviderID" class="form-label">Bác sĩ / nhân viên</label>
+                    <label for="provider-select" class="form-label">Bác sĩ / nhân viên</label>
                     <select asp-for="Input.ProviderID" asp-items="Model.ProviderOptions" class="form-select" id="provider-select">
                         <option value="">-- Chọn nhân viên --</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Input.Date" class="form-label">Ngày</label>
+                    <label for="date-input" class="form-label">Ngày</label>
                     <input asp-for="Input.Date" type="date" class="form-control" id="date-input" />
                     <span asp-validation-for="Input.Date" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Input.Slot" class="form-label">Khung giờ trống</label>
-                    <select asp-for="Input.Slot" class="form-select" id="slot-select">
+                    <label for="slot-select" class="form-label">Khung giờ trống</label>
+                    @* Compare DateTime values directly; the culture-formatted asp-for
+                       value does not match the ISO minute values used by the slot API. *@
+                    <select name="Input.Slot" class="form-select" id="slot-select">
                         <option value="">-- Chọn khung giờ --</option>
                         @foreach (var slot in Model.Slots)
                         {
-                            <option value="@slot.LocalStart.ToString("yyyy-MM-ddTHH:mm")">@slot.LocalStart.ToString("HH:mm") - @slot.LocalEnd.ToString("HH:mm")</option>
+                            <option value="@slot.LocalStart.ToString("yyyy-MM-ddTHH:mm")" selected="@(Model.Input.Slot == slot.LocalStart)">@slot.LocalStart.ToString("HH:mm") - @slot.LocalEnd.ToString("HH:mm")</option>
                         }
                     </select>
                     <span asp-validation-for="Input.Slot" class="text-danger small"></span>

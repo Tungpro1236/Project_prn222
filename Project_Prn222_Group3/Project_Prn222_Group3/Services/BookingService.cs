@@ -64,10 +64,20 @@ public class BookingService(VcmsDbContext db) : ModuleService(db)
     {
         var result = await ExecuteAsync("VCMS:Booking", actorUserId, [AppRoles.Admin, AppRoles.ClinicManager, AppRoles.Receptionist, AppRoles.Client], async actor =>
         {
-            var row = await Db.Appointments.Include(x => x.Animal).ThenInclude(x => x.Client).SingleOrDefaultAsync(x => x.AppointmentID == id);
+            var row = await Db.Appointments.AsNoTracking().Include(x => x.Animal).ThenInclude(x => x.Client).SingleOrDefaultAsync(x => x.AppointmentID == id);
             if (row is null || row.Status is not (AppointmentStatuses.Pending or AppointmentStatuses.Confirmed)) return OperationResult.Fail("Chỉ hủy được lịch chưa check-in.");
             if (actor.Role.RoleName == AppRoles.Client && row.Animal.Client.UserID != actor.UserID) return OperationResult.Fail("Bạn chỉ được hủy lịch của chính mình.");
-            row.Status = AppointmentStatuses.Cancelled; row.CancelledAt = ClinicTime.UtcNow;
+            // Tung's conditional UPDATE cannot overwrite a concurrent check-in.
+            // Keep the team-schema transaction, lock and current-actor checks.
+            var cancellable = Db.Appointments.Where(x => x.AppointmentID == id
+                && (x.Status == AppointmentStatuses.Pending || x.Status == AppointmentStatuses.Confirmed));
+            if (actor.Role.RoleName == AppRoles.Client)
+                cancellable = cancellable.Where(x => x.Animal.Client.UserID == actor.UserID);
+            var cancelledAt = ClinicTime.UtcNow;
+            var updated = await cancellable.ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, AppointmentStatuses.Cancelled)
+                .SetProperty(x => x.CancelledAt, cancelledAt));
+            if (updated == 0) return OperationResult.Fail("Lịch hẹn đã thay đổi. Vui lòng tải lại trang.");
             return OperationResult.Success("Đã hủy lịch hẹn.", id);
         });
         return new(result.Ok, result.Message, result.Id);
