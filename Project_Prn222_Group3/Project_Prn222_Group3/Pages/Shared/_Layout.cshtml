@@ -2,6 +2,7 @@
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
     var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
     var fullName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name;
+    var isLoginPage = string.Equals(ViewContext.RouteData.Values["page"]?.ToString(), "/Account/Login", StringComparison.OrdinalIgnoreCase);
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -93,7 +94,7 @@
                                 </form>
                             </li>
                         }
-                        else
+                        else if (!isLoginPage)
                         {
                             <li class="nav-item">
                                 <a class="btn btn-sm btn-light" asp-page="/Account/Login">Đăng nhập</a>
